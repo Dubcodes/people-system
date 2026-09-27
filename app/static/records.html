@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>Manage People | Race Day People Intelligence</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#6b7280; --line:rgba(120,98,69,.18); --accent:#b94b2a; --accent-dark:#8f351d; --button:#f1e5d3; --button-active:#315f48; --button-active-dark:#214130; --button-secondary:#2f4858; --bg-a:#ecdfcf; --bg-b:#f6f1e7; --panel:rgba(255,250,242,.95); --shadow:0 16px 38px rgba(50,34,16,.12); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Georgia,"Times New Roman",serif; color:var(--ink); background:linear-gradient(135deg,var(--bg-a) 0%,var(--bg-b) 100%); min-height:100vh; overflow:hidden; }
+    .page { width:min(1440px,100%); height:100vh; margin:0 auto; padding:16px; display:grid; grid-template-rows:auto minmax(0,1fr); gap:14px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow); padding:16px; min-width:0; }
+    .topbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+    .nav,.filter-row,.action-row,.chips { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .layout { display:grid; grid-template-columns:330px minmax(0,1fr); gap:14px; min-height:0; }
+    .people-panel { display:grid; grid-template-rows:auto auto minmax(0,1fr); gap:10px; min-height:0; }
+    .detail-panel { min-height:0; overflow:auto; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.16em; font-size:11px; color:var(--accent); margin-bottom:4px; }
+    h1,h2,h3,p { margin:0; }
+    h1 { font-size:24px; }
+    h2 { font-size:21px; }
+    h3 { font-size:17px; }
+    .subtle { color:var(--muted); font-size:13px; }
+    input,textarea,button,.button-link { font:inherit; border-radius:12px; padding:10px 12px; border:1px solid var(--line); }
+    input,textarea { background:white; min-width:0; }
+    button,.button-link { background:var(--button); color:var(--ink); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:transform .08s ease, filter .08s ease, box-shadow .08s ease; }
+    button:active,.button-link:active { transform:translateY(1px) scale(.98); filter:brightness(.92); box-shadow:inset 0 2px 8px rgba(0,0,0,.16); }
+    button.active { background:var(--accent-dark); color:white; border-color:transparent; }
+    button.primary,.button-link.primary { background:var(--accent); color:white; border-color:transparent; }
+    button.secondary,.button-link.secondary { background:var(--button-secondary); color:white; border-color:transparent; }
+    button.ghost,.button-link.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); }
+    button.danger { background:#7a2e2e; color:white; border-color:transparent; }
+    .tile-filter button, #role-filters button { padding:6px 9px; border-radius:999px; font-size:12px; line-height:1.15; }
+    .tile-filter button { background:#edf4f8; border-color:#b8cad5; }
+    .tile-filter button.active { background:#2f6f8f; color:white; border-color:transparent; }
+    .tile-filter button[data-image-filter="with"].active { background:#2f7d50; }
+    .tile-filter button[data-image-filter="without"].active { background:#6b7280; }
+    .search { width:100%; }
+    .filters { display:grid; gap:8px; padding:9px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.5); }
+    .records-list { display:grid; align-content:start; gap:8px; overflow:auto; min-height:0; padding-right:3px; }
+    .record-item { border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.72); padding:10px; cursor:pointer; display:grid; gap:4px; }
+    .record-item.active { border-color:var(--accent); background:white; box-shadow:0 0 0 2px rgba(185,75,42,.12); }
+    .record-line { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+    .dot { width:9px; height:9px; border-radius:50%; background:#c8b9a3; flex:0 0 auto; }
+    .dot.has-image { background:#2f9e44; }
+    .detail-grid { display:grid; gap:14px; }
+    .detail-card { border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.62); padding:14px; display:grid; gap:12px; }
+    .hero { grid-template-columns:minmax(260px,430px) minmax(0,1fr); display:grid; gap:16px; align-items:start; }
+    .hero-main-image { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; border-radius:16px; background:linear-gradient(135deg,#dcc9af,#efe2d0); border:1px solid var(--line); }
+    .thumbs { display:grid; grid-template-columns:repeat(auto-fill,minmax(86px,1fr)); gap:8px; margin-top:8px; }
+    .thumb { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:10px; border:2px solid transparent; cursor:pointer; background:#efe2d0; }
+    .thumb.active { border-color:var(--accent); }
+    .imported-meta { display:grid; gap:10px; }
+    .info-list { display:grid; gap:8px; }
+    .info-item { display:grid; gap:3px; padding:10px 12px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.62); }
+    .info-label { font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); }
+    .silk-preview { width:100%; max-width:260px; max-height:140px; object-fit:contain; border-radius:14px; border:1px solid var(--line); background:rgba(255,255,255,.75); padding:8px; }
+    .chip { border-radius:999px; padding:5px 9px; border:1px solid var(--line); background:rgba(255,255,255,.5); font-size:13px; }
+    .chip.review-chip { border-color:#f1c453; background:#fff4ce; color:#6f4b00; }
+    .toggle-check { border:1px solid var(--line); border-radius:999px; padding:6px 9px; background:rgba(255,255,255,.72); color:var(--muted); font-size:12px; display:inline-flex; gap:7px; align-items:center; width:max-content; cursor:pointer; }
+    .toggle-check input { width:auto; accent-color:var(--accent); }
+    .split { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .field { display:grid; gap:5px; }
+    .field.full { grid-column:1 / -1; }
+    .field span { font-size:12px; color:var(--muted); letter-spacing:.03em; }
+    .field input,.field textarea { width:100%; }
+    .edit-list { display:grid; gap:9px; }
+    .edit-row { display:grid; grid-template-columns:minmax(150px,1fr) 130px 130px auto auto; gap:8px; align-items:center; padding:9px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.55); }
+    .horse-row { grid-template-columns:minmax(150px,1fr) 120px 130px 130px auto auto; }
+    .linked-data { gap:14px; }
+    .linked-section { display:grid; gap:8px; padding:12px; border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.42); }
+    .linked-section header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .linked-section h4 { margin:0; font-size:15px; }
+    .compact-list { display:grid; gap:8px; }
+    details.compact-row { border:1px solid rgba(120,98,69,.18); border-radius:14px; background:rgba(255,255,255,.64); overflow:hidden; }
+    details.compact-row summary { cursor:pointer; list-style:none; padding:10px 12px; display:grid; grid-template-columns:minmax(130px,1fr) auto; gap:8px; align-items:center; }
+    details.compact-row summary::-webkit-details-marker { display:none; }
+    details.compact-row[open] summary { border-bottom:1px solid var(--line); }
+    .summary-main { display:grid; gap:3px; }
+    .summary-meta { color:var(--muted); font-size:12px; }
+    .summary-pill { border:1px solid var(--line); border-radius:999px; padding:4px 8px; background:rgba(255,255,255,.7); color:var(--muted); font-size:12px; white-space:nowrap; }
+    .compact-row .edit-row { margin:10px; }
+    .empty { border:1px dashed var(--line); border-radius:16px; padding:16px; color:var(--muted); text-align:center; background:rgba(255,255,255,.5); }
+    @media (max-width:980px) { body { overflow:auto; } .page { height:auto; } .layout,.hero,.split,.form-grid,.edit-row,.horse-row { grid-template-columns:1fr; } .field.full { grid-column:auto; } .records-list { max-height:45vh; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="panel topbar">
+      <div>
+        <div class="eyebrow">Manage People</div>
+        <h1>Manage People</h1>
+      </div>
+      <div class="nav">
+        <a class="button-link secondary" href="/">Viewer</a>
+        <a class="button-link" href="/ingest">Image Ingest</a>
+        <a class="button-link" href="/frame-pull">Frame Pull Inbox</a>
+        <a class="button-link primary" href="/records">Manage People</a>
+        <a class="button-link" href="/horses">Horses</a>
+          <a class="button-link" href="/race-ingest">Import Races</a>
+          <a class="button-link" href="/race-management">Race Management</a>
+          <a class="button-link" href="/settings">Settings</a>
+          <a class="button-link" href="/help.html" aria-label="Help" title="Help">?</a>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="panel people-panel">
+        <div>
+          <div class="eyebrow">People List</div>
+          <input id="record-search" class="search" type="search" placeholder="Search by name, alias, stable, or location. Use commas for multiple terms.">
+        </div>
+        <div class="filters">
+          <div class="filter-row" id="role-filters">
+            <button class="active" type="button" data-role="all">All</button>
+            <button type="button" data-role="jockey">Jockeys</button>
+            <button type="button" data-role="trainer">Trainers</button>
+            <button type="button" data-role="presenter">Presenters</button>
+            <button type="button" data-role="staff">Staff</button>
+            <button type="button" data-role="stable rep">Stable Reps</button>
+          </div>
+          <div class="filter-row tile-filter" id="image-filters">
+            <button class="active" type="button" data-image-filter="all">All Tiles</button>
+            <button type="button" data-image-filter="with">Has Image</button>
+            <button type="button" data-image-filter="without">No Image</button>
+          </div>
+          <div class="filter-row tile-filter" id="region-filters">
+            <button class="active" type="button" data-region-scope="current">Current Region</button>
+            <button type="button" data-region-scope="all">All Records</button>
+          </div>
+          <label class="toggle-check"><input id="show-inactive-people" type="checkbox"> Show inactive people</label>
+          <div class="subtle" id="record-count">0 records</div>
+        </div>
+        <div id="records-list" class="records-list"></div>
+      </section>
+
+      <section class="panel detail-panel" id="record-detail">
+        <div class="empty">Select a person to review images, update core details, or clean up linked data.</div>
+      </section>
+    </div>
+  </div>
+  <datalist id="people-list"></datalist>
+
+  <script>
+    const recordsList = document.getElementById('records-list');
+    const recordDetail = document.getElementById('record-detail');
+    const searchInput = document.getElementById('record-search');
+    const roleFilters = document.getElementById('role-filters');
+    const imageFilters = document.getElementById('image-filters');
+    const regionFilters = document.getElementById('region-filters');
+    const showInactivePeopleInput = document.getElementById('show-inactive-people');
+    const recordCount = document.getElementById('record-count');
+    const params = new URLSearchParams(window.location.search);
+    let selectedPersonId = params.get('person') ? Number(params.get('person')) : null;
+    let selectedImageId = null;
+    let selectedRoles = new Set();
+    let imageFilter = 'all';
+    let showInactivePeople = false;
+    let showInactiveHorses = false;
+    let people = [];
+    const CREW_REGIONS = ['Central', 'Northern', 'Christchurch', 'Dunedin'];
+    let regionScope = 'current';
+    let currentRegion = 'Current Region';
+    if (params.get('search')) searchInput.value = params.get('search');
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    }
+
+    function normalizeSearchText(value) {
+      return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+    }
+
+    function searchValueMatches(value, rawSearch) {
+      const candidate = normalizeSearchText(value);
+      const query = normalizeSearchText(rawSearch);
+      if (!query) return true;
+      if (!candidate) return false;
+      if (candidate.includes(query)) return true;
+      const candidateTokens = candidate.split(' ');
+      const queryTokens = query.split(' ');
+      let candidateIndex = 0;
+      return queryTokens.every(queryToken => {
+        while (candidateIndex < candidateTokens.length && !candidateTokens[candidateIndex].startsWith(queryToken)) candidateIndex += 1;
+        if (candidateIndex >= candidateTokens.length) return false;
+        candidateIndex += 1;
+        return true;
+      });
+    }
+
+    function personMatchesSearch(person, rawSearch) {
+      const terms = String(rawSearch || '').split(',').map(item => item.trim().toLowerCase()).filter(Boolean);
+      if (!terms.length) return true;
+      const haystacks = [
+        person.name,
+        ...(person.aliases || []),
+        ...(person.roles || []),
+        ...(person.stables || []),
+        ...(person.locations || []),
+        person.notes || '',
+      ].map(value => String(value || '').toLowerCase()).filter(Boolean);
+      return terms.every(term => haystacks.some(value => searchValueMatches(value, term)));
+    }
+
+    function needsNameReview(person) {
+      return String(person.notes || '').toLowerCase().includes('needs trainer name review');
+    }
+
+    function currentPeople() {
+      return people.filter(person => {
+        const roleMatch = !selectedRoles.size || [...selectedRoles].some(filter => (person.roles || []).some(role => role.toLowerCase().includes(filter)));
+        const imageMatch = imageFilter === 'all' || (imageFilter === 'with' ? Boolean(person.image_url) : !person.image_url);
+        const searchMatch = personMatchesSearch(person, searchInput.value);
+        return roleMatch && imageMatch && searchMatch;
+      });
+    }
+
+    function renderPeopleList() {
+      const filtered = currentPeople();
+      recordCount.textContent = `${filtered.length} of ${people.length} records`;
+      if (!filtered.length) {
+          recordsList.innerHTML = '<div class="empty">No people match the current search and filters.</div>';
+        return;
+      }
+      recordsList.innerHTML = filtered.map(person => `
+        <article class="record-item ${person.id === selectedPersonId ? 'active' : ''}" data-person-id="${person.id}">
+          <div class="record-line"><strong>${escapeHtml(person.name)}</strong><span class="dot ${person.image_url ? 'has-image' : ''}"></span></div>
+          <div class="subtle">${escapeHtml((person.roles || []).join(', ') || 'No role')} ${needsNameReview(person) ? '<span class="chip review-chip">Review name</span>' : ''}</div>
+          <div class="subtle">${escapeHtml((person.stables || []).join(', '))}</div>
+        </article>
+      `).join('');
+      recordsList.querySelectorAll('.record-item').forEach(item => {
+        item.addEventListener('click', () => {
+          selectedImageId = null;
+          loadPersonDetail(Number(item.dataset.personId));
+        });
+      });
+    }
+
+
+    function describeValue(value) {
+      return value === null || value === undefined || value === '' ? '(blank)' : value;
+    }
+
+    function normalizeForCompare(value) {
+      if (Array.isArray(value)) return value.map(item => String(item).trim()).filter(Boolean).join(', ');
+      return value === null || value === undefined ? '' : String(value).trim();
+    }
+
+    function changeLine(label, before, after) {
+      const oldValue = normalizeForCompare(before);
+      const newValue = normalizeForCompare(after);
+      if (oldValue === newValue) return null;
+      return `${label}: ${describeValue(oldValue)} -> ${describeValue(newValue)}`;
+    }
+
+    function confirmChange(title, changes) {
+      const actualChanges = changes.filter(Boolean);
+      if (!actualChanges.length) {
+        window.alert('No changes to save.');
+        return false;
+      }
+      const list = actualChanges.map(item => `- ${item}`).join('\n');
+      return window.confirm(`${title}\n\n${list}\n\nAre you sure?`);
+    }
+
+    function personByName(name) {
+      const key = String(name || '').trim().toLowerCase();
+      return people.find(person => person.name.toLowerCase() === key) || null;
+    }
+
+    async function requirePin(message = 'Enter Edit PIN to continue', endpoint = '/api/admin/edit-check') {
+      const existing = sessionStorage.getItem('peopleSystemAdminPin') || '';
+      if (existing) {
+        const existingResponse = await fetch(endpoint, { method: 'POST', headers: { 'X-Admin-Pin': existing } });
+        if (existingResponse.ok) return true;
+        sessionStorage.removeItem('peopleSystemAdminPin');
+      }
+      const pin = window.prompt(message);
+      if (!pin) return false;
+      const response = await fetch(endpoint, { method: 'POST', headers: { 'X-Admin-Pin': pin } });
+      if (!response.ok) {
+        alert('That PIN was not accepted.');
+        return false;
+      }
+      sessionStorage.setItem('peopleSystemAdminPin', pin);
+      return true;
+    }
+    function requireEditPin(message = 'Enter Edit PIN to continue') {
+      return requirePin(message, '/api/admin/edit-check');
+    }
+    function requireMasterAdminPin() {
+      return requirePin('Enter Master PIN to continue', '/api/admin/master-check');
+    }
+    function adminHeaders(extra = {}) {
+      return { 'X-Admin-Pin': sessionStorage.getItem('peopleSystemAdminPin') || '', ...extra };
+    }
+    function dateValue(value) { return value || ''; }
+    function compactDateLabel(startDate, endDate) {
+      const start = dateValue(startDate);
+      const end = dateValue(endDate);
+      if (start && end) return `${start} - ${end}`;
+      if (start) return `From ${start}`;
+      if (end) return `Until ${end}`;
+      return '';
+    }
+
+    function timelineRows(items, kind) {
+      if (!items || !items.length) return `<div class="empty">No ${kind} recorded.</div>`;
+      const endpoint = kind === 'role history' ? 'person-roles' : 'person-stables';
+      return `<div class="compact-list">${items.map(item => {
+        const dateLabel = `${dateValue(item.start_date) || 'Start unknown'} - ${dateValue(item.end_date) || 'Current'}`;
+        return `
+          <details class="compact-row">
+            <summary>
+              <span class="summary-main"><strong>${escapeHtml(item.name)}</strong><span class="summary-meta">${escapeHtml(dateLabel)}</span></span>
+              <span class="summary-pill">Edit</span>
+            </summary>
+            <div class="edit-row" data-endpoint="${endpoint}" data-id="${item.id}" data-name="${escapeHtml(item.name)}" data-start="${dateValue(item.start_date)}" data-end="${dateValue(item.end_date)}">
+              <input class="timeline-name" type="text" value="${escapeHtml(item.name)}" aria-label="${kind} name">
+              <input class="timeline-start" type="date" value="${dateValue(item.start_date)}" aria-label="Start date">
+              <input class="timeline-end" type="date" value="${dateValue(item.end_date)}" aria-label="End date">
+              <button class="save-timeline" type="button">Update</button>
+              <button class="delete-timeline danger" type="button">Delete</button>
+            </div>
+          </details>
+        `;
+      }).join('')}</div>`;
+    }
+
+    function horseRows(items) {
+      const visibleItems = showInactiveHorses ? (items || []) : (items || []).filter(item => item.is_active);
+      if (!visibleItems.length) return `<div class="empty">${items?.length ? 'Only inactive horse links are hidden.' : 'No horse links recorded.'}</div>`;
+      return `<div class="compact-list">${visibleItems.map(item => {
+        const dateLabel = compactDateLabel(item.start_date, item.end_date);
+        const meta = dateLabel ? `<span class="summary-meta">${escapeHtml(dateLabel)}</span>` : '';
+        const inactiveLabel = item.is_active ? '' : '<span class="summary-pill">Inactive</span>';
+        return `
+          <details class="compact-row">
+            <summary>
+              <span class="summary-main"><strong>${escapeHtml(item.horse_name)}</strong>${meta}</span>
+              <span>${inactiveLabel}<span class="summary-pill">Edit</span></span>
+            </summary>
+            <div class="edit-row horse-row" data-id="${item.id}" data-horse="${escapeHtml(item.horse_name)}" data-role="${escapeHtml(item.role)}" data-start="${dateValue(item.start_date)}" data-end="${dateValue(item.end_date)}">
+              <input class="horse-name" type="text" value="${escapeHtml(item.horse_name)}" aria-label="Horse name">
+              <input class="horse-role" type="text" value="${escapeHtml(item.role)}" aria-label="Horse link role">
+              <input class="horse-start" type="date" value="${dateValue(item.start_date)}" aria-label="Start date">
+              <input class="horse-end" type="date" value="${dateValue(item.end_date)}" aria-label="End date">
+              <button class="save-horse" type="button">Update</button>
+              <button class="delete-horse danger" type="button">Delete</button>
+            </div>
+          </details>
+        `;
+      }).join('')}</div>`;
+    }
+
+    function selectedImageFor(detail) {
+      if (!detail.images.length) return null;
+      const existing = detail.images.find(image => image.id === selectedImageId);
+      const preferred = detail.images.find(image => image.is_preferred);
+      return existing || preferred || detail.images[0];
+    }
+
+    function progressiveImageMarkup(className, fullSrc, thumbSrc, alt) {
+      if (!fullSrc) return `<div class="empty">No image for this person yet.</div>`;
+      return `<img class="${className} progressive-image" src="${thumbSrc || fullSrc}" data-full-src="${fullSrc}" alt="${escapeHtml(alt)}">`;
+    }
+
+    function loadProgressiveImages(root = document) {
+      root.querySelectorAll('img.progressive-image[data-full-src]').forEach(image => {
+        const fullSrc = image.dataset.fullSrc;
+        if (!fullSrc || image.src.endsWith(fullSrc)) return;
+        const loader = new Image();
+        loader.onload = () => { image.src = fullSrc; image.classList.add('full-loaded'); };
+        loader.src = fullSrc;
+      });
+    }
+
+    function renderDetail(detail) {
+      selectedPersonId = detail.id;
+      const selectedImage = selectedImageFor(detail);
+      selectedImageId = selectedImage?.id || null;
+      const selectedImageLocation = selectedImage?.location_taken || '';
+      const selectedImageNotes = selectedImage?.notes || '';
+      const thumbnails = detail.images.length > 1 ? `<div class="thumbs">${detail.images.map(image => `<img class="thumb ${image.id === selectedImageId ? 'active' : ''}" src="${image.thumbnail_url || image.url}" data-image-id="${image.id}" alt="${escapeHtml(detail.name)}">`).join('')}</div>` : '';
+      recordDetail.innerHTML = `
+        <div class="detail-grid">
+          <section class="detail-card hero">
+            <div>
+              ${selectedImage ? progressiveImageMarkup('hero-main-image', selectedImage.url, selectedImage.thumbnail_url, detail.name) : `<div class="empty">No image for this person yet.</div>`}
+              ${thumbnails}
+            </div>
+            <div class="detail-grid">
+              <div><div class="eyebrow">Person Detail</div><h2>${escapeHtml(detail.name)}</h2></div>
+              <div class="chips">${detail.roles.map(role => `<span class="chip">${escapeHtml(role)}</span>`).join('') || '<span class="chip">No role</span>'}${detail.is_absent_today ? '<span class="chip">Absent today</span>' : ''}${needsNameReview(detail) ? '<span class="chip review-chip">Trainer name needs review</span>' : ''}</div>
+              <p class="subtle">${escapeHtml(detail.notes || 'No notes yet.')}</p>
+              <div class="action-row">
+                <a class="button-link secondary" href="/ingest?person=${detail.id}">Ingest Image To This Record</a>
+                ${selectedImage ? '<button id="set-preferred-btn" class="secondary" type="button">Set Preferred Image</button>' : ''}
+                ${selectedImage ? '<button id="delete-image-btn" class="danger" type="button">Delete Selected Image</button>' : ''}
+              </div>
+            </div>
+          </section>
+
+          <section class="detail-card">
+            <div><div class="eyebrow">Edit Person</div><h3>Core Metadata</h3></div>
+            <div class="form-grid">
+              <label class="field"><span>Name</span><input id="person-name" type="text" value="${escapeHtml(detail.name)}" placeholder="Name"></label>
+              <label class="field"><span>Current role</span><input id="person-role" type="text" value="${escapeHtml(detail.roles[0] || '')}" placeholder="Role"></label>
+              <label class="field full"><span>Current stable</span><input id="person-stable" type="text" value="${escapeHtml(detail.stables[0] || '')}" placeholder="Stable"></label>
+              <label class="field full">
+                <span>Manual extra visibility</span>
+                <span class="subtle">Add a region only when an operator intentionally needs visibility beyond the automatic evidence.</span>
+                <div class="chips" id="person-visible-regions">
+                  ${CREW_REGIONS.map(region => `<label class="toggle-check"><input type="checkbox" value="${escapeHtml(region)}" ${detail.visible_regions.includes(region) ? 'checked' : ''}> ${escapeHtml(region)}</label>`).join('')}
+                </div>
+              </label>
+              <div class="field full">
+                <span>Automatically detected regions</span>
+                <span class="subtle">Read-only: derived from racing participation, images, and other trusted context.</span>
+                <div class="chips" id="person-detected-regions" aria-label="Automatically detected regions">${(detail.detected_regions || []).length ? detail.detected_regions.map(region => `<span class="chip">${escapeHtml(region)}</span>`).join('') : '<span class="chip">None yet</span>'}</div>
+              </div>
+              <label class="field full"><span>Aliases</span><input id="person-aliases" type="text" value="${escapeHtml(detail.aliases.join(', '))}" placeholder="Aliases, comma separated"></label>
+              <label class="field full"><span>Notes</span><textarea id="person-notes" rows="4" placeholder="Notes">${escapeHtml(detail.notes || '')}</textarea></label>
+            </div>
+            <div class="action-row">
+              <button id="save-person-btn" class="primary" type="button">Update Info</button>
+              <button id="toggle-absence-btn" class="ghost" type="button">${detail.is_absent_today ? 'Mark Present' : 'Mark Absent Today'}</button>
+              <button id="delete-person-btn" class="danger" type="button">Delete Entry</button>
+            </div>
+          </section>
+
+          <section class="detail-card">
+            <div><div class="eyebrow">Duplicate Cleanup</div><h3>Merge This Record</h3></div>
+            <p class="subtle">Use this when two records are the same person, for example a name change after marriage. The current record will be merged into the person you choose below.</p>
+            <div class="form-grid">
+              <label class="field full"><span>Merge into</span><input id="merge-target-name" list="people-list" placeholder="Existing person to keep"></label>
+              <label class="field full"><span>Merge note</span><input id="merge-note" placeholder="Optional note, for example married name cleanup"></label>
+            </div>
+            <div class="action-row">
+              <button id="merge-person-btn" class="danger" type="button">Merge Current Record</button>
+            </div>
+          </section>
+
+          <section class="detail-card">
+            <div><div class="eyebrow">Image Metadata</div><h3>Selected Image</h3></div>
+            ${selectedImage ? `
+              <div class="split">
+                <input id="image-location" type="text" value="${escapeHtml(selectedImageLocation)}" placeholder="Photo location taken">
+                <input id="image-notes" type="text" value="${escapeHtml(selectedImageNotes)}" placeholder="Image notes">
+              </div>
+              <div class="action-row">
+                <button id="save-image-btn" type="button">Save Image Metadata</button>
+                <button id="clear-location-btn" class="ghost" type="button">Clear Location</button>
+              </div>
+            ` : '<div class="empty">Add an image to record image metadata.</div>'}
+          </section>
+
+
+          <section class="detail-card linked-data">
+            <div><div class="eyebrow">Linked Data</div><h3>Relationships</h3></div>
+            <div class="linked-section">
+              <header>
+                <h4>Horse Links</h4>
+                <label class="toggle-check"><input id="show-person-inactive-horses" type="checkbox" ${showInactiveHorses ? 'checked' : ''}> Show inactive</label>
+              </header>
+              ${horseRows(detail.horse_links)}
+            </div>
+            <div class="linked-section">
+              <header><h4>Role Timeline</h4><span class="summary-pill">${detail.role_timeline?.length || 0}</span></header>
+              ${timelineRows(detail.role_timeline, 'role history')}
+            </div>
+            <div class="linked-section">
+              <header><h4>Stable Timeline</h4><span class="summary-pill">${detail.stable_timeline?.length || 0}</span></header>
+              ${timelineRows(detail.stable_timeline, 'stable history')}
+            </div>
+          </section>
+        </div>
+      `;
+
+      wireDetailActions(detail);
+      loadProgressiveImages(recordDetail);
+    }
+
+    function wireDetailActions(detail) {
+      recordDetail.querySelectorAll('.thumb').forEach(thumb => {
+        thumb.addEventListener('click', () => { selectedImageId = Number(thumb.dataset.imageId); renderDetail(detail); });
+      });
+
+      recordDetail.querySelectorAll('.save-timeline').forEach(button => {
+        button.addEventListener('click', async () => {
+          const row = button.closest('.edit-row');
+          const payload = {
+            name: row.querySelector('.timeline-name').value,
+            start_date: row.querySelector('.timeline-start').value || null,
+            end_date: row.querySelector('.timeline-end').value || null,
+          };
+          if (!confirmChange('Update linked timeline row', [changeLine('Name', row.dataset.name, payload.name), changeLine('Start date', row.dataset.start, payload.start_date), changeLine('End date', row.dataset.end, payload.end_date)])) return;
+          if (!await requireEditPin()) return;
+          await fetch(`/api/${row.dataset.endpoint}/${row.dataset.id}`, {
+            method: 'PUT', headers: adminHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload)
+          });
+          await loadPeople(searchInput.value); await loadPersonDetail(detail.id, true);
+        });
+      });
+
+      recordDetail.querySelectorAll('.delete-timeline').forEach(button => {
+        button.addEventListener('click', async () => {
+          const row = button.closest('.edit-row');
+          if (!confirmChange('Delete linked timeline row', ['This role/stable timeline row will be permanently deleted.'])) return;
+          if (!await requireMasterAdminPin()) { alert('Master PIN required. Delete cancelled.'); return; }
+          const response = await fetch(`/api/${row.dataset.endpoint}/${row.dataset.id}`, { method: 'DELETE', headers: adminHeaders() });
+          if (!response.ok) { alert('Delete failed.'); return; }
+          await loadPeople(searchInput.value); await loadPersonDetail(detail.id, true);
+        });
+      });
+
+      recordDetail.querySelectorAll('.save-horse').forEach(button => {
+        button.addEventListener('click', async () => {
+          const row = button.closest('.horse-row');
+          const payload = {
+            horse_name: row.querySelector('.horse-name').value,
+            role: row.querySelector('.horse-role').value,
+            start_date: row.querySelector('.horse-start').value || null,
+            end_date: row.querySelector('.horse-end').value || null,
+          };
+          if (!confirmChange('Update horse link', [changeLine('Horse', row.dataset.horse, payload.horse_name), changeLine('Role', row.dataset.role, payload.role), changeLine('Start date', row.dataset.start, payload.start_date), changeLine('End date', row.dataset.end, payload.end_date)])) return;
+          if (!await requireEditPin()) return;
+          await fetch(`/api/horse-links/${row.dataset.id}`, {
+            method: 'PUT', headers: adminHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload)
+          });
+          await loadPersonDetail(detail.id, true);
+        });
+      });
+
+      recordDetail.querySelectorAll('.delete-horse').forEach(button => {
+        button.addEventListener('click', async () => {
+          const row = button.closest('.horse-row');
+          if (!confirmChange('Delete horse link', ['This horse link will be permanently deleted.'])) return;
+          if (!await requireMasterAdminPin()) { alert('Master PIN required. Delete cancelled.'); return; }
+          const response = await fetch(`/api/horse-links/${row.dataset.id}`, { method: 'DELETE', headers: adminHeaders() });
+          if (!response.ok) { alert('Delete failed.'); return; }
+          await loadPersonDetail(detail.id, true);
+        });
+      });
+
+      const saveImageBtn = document.getElementById('save-image-btn');
+      if (saveImageBtn) saveImageBtn.addEventListener('click', async () => {
+        const payload = {
+          location_taken: document.getElementById('image-location').value || null,
+          notes: document.getElementById('image-notes').value || null,
+          is_preferred: false,
+        };
+        if (!confirmChange('Update image metadata', [changeLine('Location taken', selectedImage.location_taken, payload.location_taken), changeLine('Image notes', selectedImage.notes, payload.notes)])) return;
+        if (!await requireEditPin()) return;
+        await fetch(`/api/images/${selectedImageId}`, { method:'PUT', headers:adminHeaders({'Content-Type':'application/json'}), body:JSON.stringify(payload) });
+        await loadPersonDetail(detail.id, true);
+      });
+
+      const clearLocationBtn = document.getElementById('clear-location-btn');
+      if (clearLocationBtn) clearLocationBtn.addEventListener('click', async () => {
+        if (!confirmChange('Clear image location', [changeLine('Location taken', selectedImage.location_taken, null)])) return;
+        if (!await requireEditPin()) return;
+        document.getElementById('image-location').value = '';
+        await fetch(`/api/images/${selectedImageId}`, { method:'PUT', headers:adminHeaders({'Content-Type':'application/json'}), body:JSON.stringify({ location_taken:null, notes:document.getElementById('image-notes').value || null, is_preferred:false }) });
+        await loadPersonDetail(detail.id, true);
+      });
+
+      const setPreferredBtn = document.getElementById('set-preferred-btn');
+      if (setPreferredBtn) setPreferredBtn.addEventListener('click', async () => {
+        if (!confirmChange('Set preferred image', ['Selected image will become the preferred image for this person.'])) return;
+        if (!await requireEditPin()) return;
+        await fetch(`/api/images/${selectedImageId}`, { method:'PUT', headers:adminHeaders({'Content-Type':'application/json'}), body:JSON.stringify({ location_taken:document.getElementById('image-location')?.value || null, notes:document.getElementById('image-notes')?.value || null, is_preferred:true }) });
+        await loadPeople(searchInput.value); await loadPersonDetail(detail.id, true);
+      });
+
+      const deleteImageBtn = document.getElementById('delete-image-btn');
+      if (deleteImageBtn) deleteImageBtn.addEventListener('click', async () => {
+        if (!confirmChange('Delete selected image', ['Selected image will be hidden from records.', 'Original image file will be preserved for future recovery.'])) return;
+        if (!await requireMasterAdminPin()) { alert('Master PIN required. Delete cancelled.'); return; }
+        const response = await fetch(`/api/images/${selectedImageId}`, { method:'DELETE', headers:adminHeaders() });
+        if (!response.ok) { alert('Delete failed.'); return; }
+        selectedImageId = null; await loadPeople(searchInput.value); await loadPersonDetail(detail.id, true);
+      });
+
+      document.getElementById('save-person-btn').addEventListener('click', async () => {
+        const visibleRegions = [...recordDetail.querySelectorAll('#person-visible-regions input[type="checkbox"]:checked')].map(input => input.value);
+        const payload = {
+          name: document.getElementById('person-name').value,
+          role: document.getElementById('person-role').value || null,
+          stable: document.getElementById('person-stable').value || null,
+          horse_name: null,
+          aliases: document.getElementById('person-aliases').value.split(',').map(item => item.trim()).filter(Boolean),
+          notes: document.getElementById('person-notes').value || null,
+          visible_regions: visibleRegions,
+        };
+        if (!confirmChange('Update person record', [changeLine('Name', detail.name, payload.name), changeLine('Role', detail.roles[0] || null, payload.role), changeLine('Stable', detail.stables[0] || null, payload.stable), changeLine('Visible regions', detail.visible_regions || [], payload.visible_regions), changeLine('Aliases', detail.aliases, payload.aliases), changeLine('Notes', detail.notes, payload.notes)])) return;
+        if (!await requireEditPin('Enter Edit PIN to update this person record')) return;
+        const response = await fetch(`/api/people/${detail.id}`, {
+          method:'PUT', headers:adminHeaders({'Content-Type':'application/json'}), body:JSON.stringify(payload)
+        });
+          if (!response.ok) { alert('Update failed. This record may conflict with an existing person.'); return; }
+        const updated = await response.json(); await loadPeople(searchInput.value); selectedImageId = selectedImageFor(updated)?.id || null; renderDetail(updated);
+      });
+
+      document.getElementById('toggle-absence-btn').addEventListener('click', async () => {
+        const reason = detail.is_absent_today ? null : window.prompt('Reason for absence (optional):', detail.absence_reason || '');
+        if (!confirmChange(detail.is_absent_today ? 'Mark person present' : 'Mark person absent', [detail.is_absent_today ? 'Absence marker will be removed.' : `Absent reason: ${describeValue(reason)}`])) return;
+        if (!await requireEditPin()) return;
+        await fetch(`/api/people/${detail.id}/absence`, { method:'POST', headers:adminHeaders({'Content-Type':'application/json'}), body:JSON.stringify({ is_absent:!detail.is_absent_today, reason:reason || null }) });
+        await loadPeople(searchInput.value); await loadPersonDetail(detail.id, true);
+      });
+
+      document.getElementById('delete-person-btn').addEventListener('click', async () => {
+        if (!confirmChange('Delete person entry', [`Person: ${detail.name}`, 'Entry will be hidden from active records.', 'Images, links, and history will be preserved for future recovery.'])) return;
+        if (!await requireMasterAdminPin()) { alert('Master PIN required. Delete cancelled.'); return; }
+        const response = await fetch(`/api/people/${detail.id}`, { method:'DELETE', headers:adminHeaders() });
+        if (!response.ok) { alert('Delete entry failed.'); return; }
+        selectedPersonId = null;
+        selectedImageId = null;
+        recordDetail.innerHTML = '<div class="empty">Entry hidden. Select another person to continue.</div>';
+        await loadPeople(searchInput.value);
+      });
+
+      document.getElementById('merge-person-btn').addEventListener('click', async () => {
+        const targetName = document.getElementById('merge-target-name').value;
+        const target = personByName(targetName);
+        if (!target) { alert('Choose an existing person to merge into.'); return; }
+        if (target.id === detail.id) { alert('Choose a different person to keep.'); return; }
+        const note = document.getElementById('merge-note').value || null;
+        if (!confirmChange('Merge duplicate person record', [
+          `Source hidden after merge: ${detail.name}`,
+          `Record kept: ${target.name}`,
+          'Images, aliases, roles, stables, race links, horse links, manual attendees, and absences will move to the kept record.',
+          note ? `Note: ${note}` : null,
+        ])) return;
+        if (!await requireMasterAdminPin()) { alert('Master PIN required. Merge cancelled.'); return; }
+        const response = await fetch('/api/people/merge', {
+          method: 'POST',
+          headers: adminHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ source_person_id: detail.id, target_person_id: target.id, note }),
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          alert(error.detail || 'Merge failed.');
+          return;
+        }
+        selectedPersonId = target.id;
+        selectedImageId = null;
+        await loadPeople(searchInput.value);
+      });
+
+      const inactiveHorseToggle = document.getElementById('show-person-inactive-horses');
+      if (inactiveHorseToggle) {
+        inactiveHorseToggle.addEventListener('change', () => {
+          showInactiveHorses = inactiveHorseToggle.checked;
+          renderDetail(detail);
+        });
+      }
+    }
+
+    async function loadPeople(search = '') {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (showInactivePeople) params.set('include_inactive', 'true');
+      params.set('region_scope', regionScope);
+      const query = params.toString() ? `?${params}` : '';
+      const response = await fetch(`/api/people/overview${query}`);
+      const overview = await response.json();
+      currentRegion = overview.current_region || currentRegion;
+      regionFilters.querySelector('[data-region-scope="current"]').textContent = currentRegion;
+      people = overview.all_people;
+      document.getElementById('people-list').innerHTML = people.map(person => `<option value="${escapeHtml(person.name)}"></option>`).join('');
+      renderPeopleList();
+      const filtered = currentPeople();
+      if (!selectedPersonId || !people.some(person => person.id === selectedPersonId)) selectedPersonId = filtered[0]?.id || people[0]?.id || null;
+      if (selectedPersonId) await loadPersonDetail(selectedPersonId, true);
+    }
+
+    async function loadPersonDetail(personId, keepImage = false) {
+      if (!keepImage) selectedImageId = null;
+      if (Number(personId) !== selectedPersonId) showInactiveHorses = false;
+      const response = await fetch(`/api/people/${personId}`);
+      if (!response.ok) { recordDetail.innerHTML = '<div class="empty">This record could not be loaded.</div>'; return; }
+      renderDetail(await response.json());
+      renderPeopleList();
+    }
+
+    function updateRoleButtons() {
+      roleFilters.querySelectorAll('[data-role]').forEach(button => {
+        const role = button.dataset.role;
+        button.classList.toggle('active', role === 'all' ? !selectedRoles.size : selectedRoles.has(role));
+      });
+    }
+
+    roleFilters.querySelectorAll('[data-role]').forEach(button => {
+      button.addEventListener('click', () => {
+        const role = button.dataset.role;
+        if (role === 'all') selectedRoles.clear();
+        else if (selectedRoles.has(role)) selectedRoles.delete(role);
+        else selectedRoles.add(role);
+        updateRoleButtons();
+        renderPeopleList();
+      });
+    });
+
+    imageFilters.querySelectorAll('[data-image-filter]').forEach(button => {
+      button.addEventListener('click', () => {
+        imageFilter = button.dataset.imageFilter;
+        imageFilters.querySelectorAll('[data-image-filter]').forEach(item => item.classList.toggle('active', item === button));
+        renderPeopleList();
+      });
+    });
+
+    regionFilters.querySelectorAll('[data-region-scope]').forEach(button => {
+      button.addEventListener('click', () => {
+        regionScope = button.dataset.regionScope;
+        regionFilters.querySelectorAll('[data-region-scope]').forEach(item => item.classList.toggle('active', item === button));
+        loadPeople(searchInput.value);
+      });
+    });
+
+    searchInput.addEventListener('input', () => renderPeopleList());
+    showInactivePeopleInput.addEventListener('change', () => {
+      showInactivePeople = showInactivePeopleInput.checked;
+      loadPeople(searchInput.value);
+    });
+    loadPeople(searchInput.value);
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+

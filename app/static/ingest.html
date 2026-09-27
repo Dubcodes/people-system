@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>Ingest | Race Day People Intelligence</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#6b7280; --line:rgba(120,98,69,.18); --accent:#b94b2a; --accent-dark:#8f351d; --button:#f1e5d3; --button-active:#315f48; --button-active-dark:#214130; --button-secondary:#2f4858; --bg-a:#ecdfcf; --bg-b:#f6f1e7; --panel:rgba(255,250,242,.95); --shadow:0 16px 38px rgba(50,34,16,.12); }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: linear-gradient(135deg, var(--bg-a) 0%, var(--bg-b) 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .page {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+    .topbar,.nav,.action-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+    .nav,.action-row { justify-content:flex-start; }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 11px;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    h1, h2, p { margin: 0; }
+    h1 { font-size:24px; }
+    h2 { font-size:20px; }
+    .subtle { color: var(--muted); font-size:13px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr); gap: 14px; }
+    .form-grid { display: grid; gap: 10px; }
+    .file-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    input, textarea, select, button, .button-link {
+      font: inherit;
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+    }
+    input, textarea, select { background: white; min-width:0; }
+    button, .button-link { background:var(--button); color:var(--ink); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:transform .08s ease, filter .08s ease, box-shadow .08s ease; }
+    button:active, .button-link:active { transform:translateY(1px) scale(.98); filter:brightness(.92); box-shadow:inset 0 2px 8px rgba(0,0,0,.16); }
+    button.primary, .button-link.primary { background:var(--accent); color:white; border-color:transparent; }
+    button.secondary, .button-link.secondary { background:var(--button-secondary); color:white; border-color:transparent; }
+    .filename-suggestion {
+      min-height: 42px;
+      max-width: 290px;
+      justify-content: flex-start;
+      text-align: left;
+      white-space: normal;
+      background: var(--button);
+      color: var(--ink);
+      border-color: var(--line);
+      box-shadow: none;
+    }
+    .filename-suggestion strong { color: var(--button-active-dark); }
+    .hidden { display: none !important; }
+    .preview {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #dcc9af, #efe2d0);
+      border: 1px solid var(--line);
+    }
+    .status, .helper {
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid var(--line);
+    }
+    .helper { display: grid; gap: 10px; }
+    @media (max-width: 860px) {
+      .layout, .split { grid-template-columns: 1fr; }
+      .file-row { grid-template-columns: 1fr; }
+      .filename-suggestion { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="panel">
+      <div class="topbar">
+        <div><div class="eyebrow">Image Ingest</div><h1>Tag and ingest new images</h1></div>
+      <div class="nav">
+        <a class="button-link secondary" href="/">Viewer</a>
+        <a class="button-link primary" href="/ingest">Image Ingest</a>
+        <a class="button-link" href="/bulk-ingest">Bulk Ingest</a>
+        <a class="button-link" href="/records">Manage People</a>
+        <a class="button-link" href="/horses">Horses</a>
+          <a class="button-link" href="/race-ingest">Import Races</a>
+          <a class="button-link" href="/race-management">Race Management</a>
+          <a class="button-link" href="/settings">Settings</a>
+          <a class="button-link" href="/help.html" aria-label="Help" title="Help">?</a>
+      </div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="eyebrow">Image Intake</div>
+        <h2>New Image Or Additional Angle</h2>
+        <form id="ingest-form" class="form-grid" autocomplete="off">
+          <div class="file-row">
+            <input id="file-input" type="file" name="file" accept="image/*" required>
+            <button id="filename-suggestion" class="filename-suggestion hidden" type="button"></button>
+          </div>
+          <div id="filename-suggestion-note" class="subtle hidden"></div>
+          <div class="split">
+            <input type="text" name="name" placeholder="Full name" list="people-list" autocomplete="off" required>
+            <input type="text" name="role" placeholder="Role" list="roles-list" autocomplete="off">
+          </div>
+          <div class="split">
+            <input type="text" name="stable" placeholder="Stable" list="stables-list" autocomplete="off">
+            <input type="text" name="location_taken" placeholder="Location taken" list="locations-list" autocomplete="off">
+          </div>
+          <label>
+            <div class="eyebrow">Source Region</div>
+            <select name="source_region" id="source-region"></select>
+          </label>
+          <input type="text" name="horse_name" placeholder="Horse name" list="horses-list" autocomplete="off" data-clear-on-linked-person="true">
+          <input type="hidden" name="aspect_ratio" value="4:3">
+          <input type="text" name="aliases" placeholder="Aliases, comma separated" list="aliases-list" autocomplete="off">
+          <textarea name="notes" rows="6" placeholder="Notes"></textarea>
+          <datalist id="people-list"></datalist>
+          <datalist id="roles-list"></datalist>
+          <datalist id="stables-list"></datalist>
+          <datalist id="locations-list"></datalist>
+          <datalist id="horses-list"></datalist>
+          <datalist id="aliases-list"></datalist>
+          <button class="primary" type="submit">Ingest Image</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="eyebrow">Preview</div>
+        <h2>Before You Save</h2>
+        <img id="preview" class="preview" alt="Upload preview">
+        <div class="helper">
+          <div><strong>Use cases</strong></div>
+          <div class="subtle">Add a brand-new person, add another image to an existing person, or attach horse context while you ingest.</div>
+          <div class="subtle">Saving asks for the Edit PIN. If you accidentally ingest a duplicate, use the records page to open the person and delete the duplicate image with the Master PIN.</div>
+        </div>
+        <div id="status" class="status subtle">Choose an image, complete the metadata, and save.</div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('ingest-form');
+    const fileInput = document.getElementById('file-input');
+    const filenameSuggestion = document.getElementById('filename-suggestion');
+    const filenameSuggestionNote = document.getElementById('filename-suggestion-note');
+    const preview = document.getElementById('preview');
+    const status = document.getElementById('status');
+    const sourceRegionSelect = document.getElementById('source-region');
+    const params = new URLSearchParams(window.location.search);
+    const linkedPersonId = params.get('person');
+    const isLinkedPersonIngest = Boolean(linkedPersonId);
+    let suggestions = { people: [], aliases: [], roles: [], stables: [], locations: [], horses: [] };
+    let overviewPeople = [];
+    let defaultSourceRegion = 'Northern';
+    let filenameSuggestedPerson = null;
+
+    function adminHeaders(extra = {}) {
+      return { 'X-Admin-Pin': sessionStorage.getItem('peopleSystemAdminPin') || '', ...extra };
+    }
+
+    async function requireEditPin(message = 'Enter Edit PIN to ingest this image') {
+      const existing = sessionStorage.getItem('peopleSystemAdminPin') || '';
+      if (existing) {
+        const check = await fetch('/api/admin/edit-check', { method: 'POST', headers: { 'X-Admin-Pin': existing } });
+        if (check.ok) return true;
+        sessionStorage.removeItem('peopleSystemAdminPin');
+      }
+      const pin = window.prompt(message);
+      if (!pin) return false;
+      const response = await fetch('/api/admin/edit-check', { method: 'POST', headers: { 'X-Admin-Pin': pin } });
+      if (!response.ok) {
+        alert('That Edit PIN was not accepted.');
+        return false;
+      }
+      sessionStorage.setItem('peopleSystemAdminPin', pin);
+      return true;
+    }
+
+    function optionValue(value) {
+      return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[character]));
+    }
+
+    function fillDatalist(id, values) {
+      const list = document.getElementById(id);
+      list.innerHTML = [...new Set((values || []).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b))
+        .map(value => `<option value="${optionValue(value)}"></option>`)
+        .join('');
+    }
+
+    function applyDefaultSourceRegion() {
+      if (!sourceRegionSelect.options.length) return;
+      const availableRegions = Array.from(sourceRegionSelect.options).map(option => option.value);
+      const resolvedRegion = availableRegions.includes(defaultSourceRegion)
+        ? defaultSourceRegion
+        : availableRegions[0];
+      if (resolvedRegion) sourceRegionSelect.value = resolvedRegion;
+    }
+
+    function normalizeLookupText(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim()
+        .replace(/\s+/g, ' ');
+    }
+
+    function filenameMatchText(fileName) {
+      const stem = String(fileName || '').replace(/\.[^.]+$/, '');
+      return normalizeLookupText(
+        stem
+          .replace(/\b(img|image|photo|pic|picture|headshot|profile|screenshot|copy|edited|edit|final|crop|cropped)\b/gi, ' ')
+          .replace(/\b(dsc|pxl|img)[-_ ]?\d+\b/gi, ' ')
+          .replace(/\b\d{6,}\b/g, ' ')
+      );
+    }
+
+    function scoreCandidateName(candidateName, filenameText) {
+      const candidate = normalizeLookupText(candidateName);
+      if (!candidate || !filenameText) return 0;
+      const filenameTokens = filenameText.split(' ').filter(token => token.length > 1);
+      const candidateTokens = candidate.split(' ').filter(token => token.length > 1);
+      if (!filenameTokens.length || !candidateTokens.length) return 0;
+      if (filenameText === candidate) return 120;
+      if (filenameText.includes(candidate) && candidate.length >= 5) return 104 + Math.min(candidate.length, 24);
+      if (candidate.includes(filenameText) && filenameText.length >= 5) return 78 + Math.min(filenameText.length, 20);
+      const matchedTokens = candidateTokens.filter(token => filenameTokens.includes(token));
+      if (matchedTokens.length === candidateTokens.length && candidateTokens.length >= 2) {
+        return 78 + candidateTokens.length * 8 + Math.min(candidate.length, 20);
+      }
+      if (matchedTokens.length >= 2) return 58 + matchedTokens.length * 9;
+      if (candidateTokens.length === 1 && matchedTokens.length === 1 && candidate.length >= 5) return 72;
+      return 0;
+    }
+
+    function bestPersonForFilename(fileName) {
+      const filenameText = filenameMatchText(fileName);
+      if (!filenameText || !overviewPeople.length) return null;
+      const matches = overviewPeople
+        .map(person => {
+          const candidateNames = [person.name, ...(person.aliases || [])].filter(Boolean);
+          const score = candidateNames.reduce((best, candidate) => Math.max(best, scoreCandidateName(candidate, filenameText)), 0);
+          return { person, score };
+        })
+        .filter(match => match.score >= 78)
+        .sort((a, b) => b.score - a.score);
+      if (!matches.length) return null;
+      if (matches[1] && matches[0].score - matches[1].score < 8) return null;
+      return matches[0].person;
+    }
+
+    function hideFilenameSuggestion() {
+      filenameSuggestedPerson = null;
+      filenameSuggestion.classList.add('hidden');
+      filenameSuggestionNote.classList.add('hidden');
+      filenameSuggestion.textContent = '';
+      filenameSuggestionNote.textContent = '';
+    }
+
+    function resetIngestFormAfterHandledImage() {
+      form.reset();
+      applyDefaultSourceRegion();
+      preview.removeAttribute('src');
+      hideFilenameSuggestion();
+    }
+
+    function updateFilenameSuggestion() {
+      hideFilenameSuggestion();
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      const person = bestPersonForFilename(file.name);
+      if (!person) return;
+      filenameSuggestedPerson = person;
+      filenameSuggestion.innerHTML = `Use <strong>${escapeHtml(person.name)}</strong>`;
+      filenameSuggestionNote.textContent = `Filename looks like ${person.name}. Click the suggestion to fill that record, or ignore it and enter details normally.`;
+      filenameSuggestion.classList.remove('hidden');
+      filenameSuggestionNote.classList.remove('hidden');
+    }
+
+    function clearImageContextFields() {
+      form.elements.horse_name.value = '';
+      form.elements.notes.value = '';
+    }
+
+    function fillPersonFields(person, { replace = false, clearContext = false, statusMessage = '' } = {}) {
+      form.elements.name.value = person.name || '';
+      if (replace || !form.elements.role.value) form.elements.role.value = person.roles?.[0] || '';
+      if (replace || !form.elements.stable.value) form.elements.stable.value = person.stables?.[0] || '';
+      if (replace || !form.elements.aliases.value) form.elements.aliases.value = (person.aliases || []).join(', ');
+      if (clearContext) clearImageContextFields();
+      if (statusMessage) status.textContent = statusMessage;
+    }
+
+    async function fillPersonFromRecord(personId, options = {}) {
+      const response = await fetch(`/api/people/${personId}`);
+      if (!response.ok) throw new Error('Person lookup failed');
+      const person = await response.json();
+      fillPersonFields(person, options);
+      return person;
+    }
+
+    async function loadSuggestions() {
+      try {
+        const [suggestionResponse, overviewResponse] = await Promise.all([
+          fetch('/api/suggestions'),
+          fetch('/api/people/overview?region_scope=all')
+        ]);
+        if (suggestionResponse.ok) suggestions = await suggestionResponse.json();
+        if (overviewResponse.ok) overviewPeople = (await overviewResponse.json()).all_people || [];
+        sourceRegionSelect.innerHTML = (suggestions.regions || []).map(region => `<option value="${optionValue(region)}">${region}</option>`).join('');
+        if (suggestions.default_region) defaultSourceRegion = suggestions.default_region;
+        applyDefaultSourceRegion();
+        fillDatalist('people-list', suggestions.people);
+        fillDatalist('roles-list', suggestions.roles);
+        fillDatalist('stables-list', suggestions.stables);
+        fillDatalist('locations-list', suggestions.locations);
+        fillDatalist('horses-list', suggestions.horses);
+        fillDatalist('aliases-list', suggestions.aliases);
+        updateFilenameSuggestion();
+      } catch (error) {
+        console.warn('Suggestion loading failed', error);
+      }
+    }
+
+    function maybeAutofillPerson() {
+      const typed = form.elements.name.value.trim().toLowerCase();
+      if (!typed) return;
+      const person = overviewPeople.find(item => item.name.toLowerCase() === typed || (item.aliases || []).some(alias => alias.toLowerCase() === typed));
+      if (!person) return;
+      fillPersonFields(person, { statusMessage: `Matched existing person: ${person.name}.` });
+    }
+
+    function clearLinkedPersonImageContext() {
+      if (!isLinkedPersonIngest) return;
+      clearImageContextFields();
+    }
+
+    async function prefillLinkedPerson() {
+      if (!linkedPersonId) return;
+      try {
+        const person = await fillPersonFromRecord(linkedPersonId, { replace: true, clearContext: true });
+        status.textContent = `Adding a new image directly to ${person.name}.`;
+        requestAnimationFrame(clearLinkedPersonImageContext);
+        setTimeout(clearLinkedPersonImageContext, 150);
+      } catch (error) {
+        console.warn('Person prefill failed', error);
+        status.textContent = 'Could not load that person record. You can still enter details manually.';
+      }
+    }
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      preview.src = URL.createObjectURL(file);
+      status.textContent = `Selected ${file.name}.`;
+      updateFilenameSuggestion();
+    });
+
+    filenameSuggestion.addEventListener('click', async () => {
+      if (!filenameSuggestedPerson) return;
+      filenameSuggestion.disabled = true;
+      try {
+        const person = await fillPersonFromRecord(filenameSuggestedPerson.id, {
+          replace: true,
+          clearContext: true,
+          statusMessage: `Matched filename to ${filenameSuggestedPerson.name}.`,
+        });
+        filenameSuggestion.innerHTML = `Using <strong>${escapeHtml(person.name)}</strong>`;
+        filenameSuggestionNote.textContent = 'Record fields have been filled from this person. You can still edit anything before submitting.';
+      } catch (error) {
+        console.warn('Filename suggestion failed', error);
+        status.textContent = 'Could not load that suggested record. You can still enter details manually.';
+      } finally {
+        filenameSuggestion.disabled = false;
+      }
+    });
+
+    loadSuggestions();
+    form.elements.name.addEventListener('change', maybeAutofillPerson);
+    form.elements.name.addEventListener('blur', maybeAutofillPerson);
+    prefillLinkedPerson();
+    window.addEventListener('pageshow', clearLinkedPersonImageContext);
+    window.addEventListener('focus', clearLinkedPersonImageContext);
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!await requireEditPin()) {
+        status.textContent = 'Image ingest cancelled. Edit PIN is required to save.';
+        return;
+      }
+      const formData = new FormData(form);
+      status.textContent = 'Uploading and processing image...';
+      const response = await fetch('/api/ingest/', { method: 'POST', headers: adminHeaders(), body: formData });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        status.textContent = result.detail || result.message || `Upload failed with HTTP ${response.status}. Check the data and try again.`;
+        return;
+      }
+      if (result.status === 'duplicate') {
+        status.textContent = result.message || 'That image already exists, so it was not saved again.';
+        resetIngestFormAfterHandledImage();
+        return;
+      }
+      status.textContent = `Saved image for person #${result.person_id}.`;
+      resetIngestFormAfterHandledImage();
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+

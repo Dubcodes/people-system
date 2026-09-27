@@ -1,0 +1,115 @@
+version: "3.9"
+
+services:
+  app_northern:
+    image: python:3.11-slim
+    container_name: people-app-northern
+    working_dir: /app
+    environment:
+      PEOPLE_INSTANCE_ID: northern
+      PEOPLE_INSTANCE_NAME: Northern
+      PEOPLE_DEFAULT_REGION: Northern
+    volumes:
+      - /home/mainuser/people-system/app:/app
+    command: sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8090:8000"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  app_central:
+    image: python:3.11-slim
+    container_name: people-app-central
+    working_dir: /app
+    environment:
+      PEOPLE_INSTANCE_ID: central
+      PEOPLE_INSTANCE_NAME: Central
+      PEOPLE_DEFAULT_REGION: Central
+    volumes:
+      - /home/mainuser/people-system/app:/app
+    command: sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8091:8000"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  app_christchurch:
+    image: python:3.11-slim
+    container_name: people-app-christchurch
+    working_dir: /app
+    environment:
+      PEOPLE_INSTANCE_ID: christchurch
+      PEOPLE_INSTANCE_NAME: Christchurch
+      PEOPLE_DEFAULT_REGION: Christchurch
+    volumes:
+      - /home/mainuser/people-system/app:/app
+    command: sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8092:8000"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  app_dunedin:
+    image: python:3.11-slim
+    container_name: people-app-dunedin
+    working_dir: /app
+    environment:
+      PEOPLE_INSTANCE_ID: dunedin
+      PEOPLE_INSTANCE_NAME: Dunedin
+      PEOPLE_DEFAULT_REGION: Dunedin
+    volumes:
+      - /home/mainuser/people-system/app:/app
+    command: sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8093:8000"
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:15
+    container_name: people-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the deployment environment}
+      POSTGRES_DB: ${POSTGRES_DB:-people}
+    volumes:
+      - /home/mainuser/people-system/postgres:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+
+  tunnel_northern:
+    image: cloudflare/cloudflared:latest
+    container_name: people-temp-tunnel-northern
+    command: tunnel --no-autoupdate --url http://app_northern:8000
+    depends_on:
+      - app_northern
+    restart: unless-stopped
+
+  tunnel_central:
+    image: cloudflare/cloudflared:latest
+    container_name: people-temp-tunnel-central
+    command: tunnel --no-autoupdate --url http://app_central:8000
+    depends_on:
+      - app_central
+    restart: unless-stopped
+
+  tunnel_christchurch:
+    image: cloudflare/cloudflared:latest
+    container_name: people-temp-tunnel-christchurch
+    command: tunnel --no-autoupdate --url http://app_christchurch:8000
+    depends_on:
+      - app_christchurch
+    restart: unless-stopped
+
+  tunnel_dunedin:
+    image: cloudflare/cloudflared:latest
+    container_name: people-temp-tunnel-dunedin
+    command: tunnel --no-autoupdate --url http://app_dunedin:8000
+    depends_on:
+      - app_dunedin
+    restart: unless-stopped

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>Horse Management | Race Day People Intelligence</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#6b7280; --line:rgba(120,98,69,.18); --accent:#b94b2a; --accent-dark:#8f351d; --button:#f1e5d3; --button-active:#315f48; --button-active-dark:#214130; --button-secondary:#2f4858; --bg-a:#ecdfcf; --bg-b:#f6f1e7; --panel:rgba(255,250,242,.95); --shadow:0 16px 38px rgba(50,34,16,.12); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Georgia,"Times New Roman",serif; color:var(--ink); background:linear-gradient(135deg,var(--bg-a) 0%,var(--bg-b) 100%); min-height:100vh; overflow-x:hidden; }
+    .page { width:min(1380px,100%); height:100vh; margin:0 auto; padding:16px; display:grid; grid-template-rows:auto minmax(0,1fr); gap:14px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow); padding:16px; min-width:0; }
+    .topbar,.nav,.action-row,.metric-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+    .nav,.action-row,.metric-row { justify-content:flex-start; }
+    .layout { display:grid; grid-template-columns:360px minmax(0,1fr); gap:14px; min-height:0; }
+    .list-panel { display:grid; grid-template-rows:auto auto minmax(0,1fr); gap:10px; min-height:0; }
+    .detail-panel { min-height:0; overflow:auto; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.16em; font-size:11px; color:var(--accent); margin-bottom:4px; }
+    h1,h2,h3,p { margin:0; }
+    h1 { font-size:24px; }
+    h2 { font-size:21px; }
+    h3 { font-size:17px; }
+    .subtle { color:var(--muted); font-size:13px; }
+    input,textarea,select,button,.button-link { font:inherit; border-radius:12px; padding:10px 12px; border:1px solid var(--line); }
+    input,textarea,select { background:white; min-width:0; width:100%; }
+    textarea { resize:vertical; }
+    button,.button-link { background:var(--button); color:var(--ink); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:transform .08s ease, filter .08s ease, box-shadow .08s ease; }
+    button:active,.button-link:active { transform:translateY(1px) scale(.98); filter:brightness(.92); box-shadow:inset 0 2px 8px rgba(0,0,0,.16); }
+    button.primary,.button-link.primary { background:var(--accent); color:white; border-color:transparent; }
+    button.secondary,.button-link.secondary { background:var(--button-secondary); color:white; border-color:transparent; }
+    button.danger,.button-link.danger { background:#7a2e2e; color:white; border-color:transparent; }
+    .horse-list { display:grid; align-content:start; gap:8px; overflow:auto; min-height:0; padding-right:3px; }
+    .horse-item { border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.72); padding:10px; cursor:pointer; display:grid; gap:4px; }
+    .horse-item.active { border-color:var(--accent); background:white; box-shadow:0 0 0 2px rgba(185,75,42,.12); }
+    .detail-grid { display:grid; gap:14px; }
+    .detail-card { border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.62); padding:14px; display:grid; gap:12px; }
+    .overview-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .metric { border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.62); padding:12px; display:grid; gap:4px; }
+    .metric strong { font-size:20px; }
+    .history-list,.link-list { display:grid; gap:10px; }
+    .history-card,.link-card { border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.62); padding:12px; display:grid; gap:10px; }
+    .history-card header,.link-card header { display:flex; justify-content:space-between; gap:10px; align-items:start; flex-wrap:wrap; }
+    .number-badge { min-width:38px; height:38px; border-radius:12px; background:var(--accent-dark); color:white; display:inline-flex; align-items:center; justify-content:center; font-weight:bold; }
+    .mini-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .form-grid { display:grid; gap:10px; }
+    .split { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    table { width:100%; border-collapse:collapse; background:rgba(255,255,255,.65); border-radius:14px; overflow:hidden; }
+    th,td { text-align:left; padding:9px; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
+    .empty { border:1px dashed var(--line); border-radius:16px; padding:16px; color:var(--muted); text-align:center; background:rgba(255,255,255,.5); }
+    @media (max-width:900px) { .page { height:auto; } .layout,.split,.overview-grid,.mini-grid { grid-template-columns:1fr; } .horse-list { max-height:45vh; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="panel topbar">
+      <div>
+        <div class="eyebrow">Manage Horses</div>
+        <h1>Horses</h1>
+      </div>
+      <div class="nav">
+        <a class="button-link secondary" href="/">Viewer</a>
+        <a class="button-link" href="/ingest">Image Ingest</a>
+        <a class="button-link" href="/records">Manage People</a>
+        <a class="button-link primary" href="/horses">Horses</a>
+          <a class="button-link" href="/race-ingest">Import Races</a>
+          <a class="button-link" href="/race-management">Race Management</a>
+          <a class="button-link" href="/settings">Settings</a>
+          <a class="button-link" href="/help.html" aria-label="Help" title="Help">?</a>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="panel list-panel">
+        <div>
+          <div class="eyebrow">Horse List</div>
+          <input id="search" type="search" placeholder="Search horse, stable, or notes">
+          <select id="stable-filter"><option value="">All stables</option></select>
+          <label class="subtle"><input id="show-inactive" type="checkbox"> Show inactive horses</label>
+          <p class="subtle" id="horse-count">0 horses</p>
+        </div>
+        <div id="horse-list" class="horse-list"></div>
+      </section>
+
+      <section class="panel detail-panel" id="horse-detail">
+        <div class="empty">Select a horse to view race history and edit stable notes.</div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const horseList = document.getElementById('horse-list');
+    const horseDetail = document.getElementById('horse-detail');
+    const horseCount = document.getElementById('horse-count');
+    const searchInput = document.getElementById('search');
+    const stableFilter = document.getElementById('stable-filter');
+    const showInactiveInput = document.getElementById('show-inactive');
+    let horses = [];
+    let selectedHorseId = null;
+    let showInactive = false;
+    let suggestions = { stables: [] };
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    }
+
+    function adminHeaders(extra = {}) {
+      return { 'X-Admin-Pin': sessionStorage.getItem('peopleSystemAdminPin') || '', ...extra };
+    }
+
+    async function requirePin(message, endpoint) {
+      const existing = sessionStorage.getItem('peopleSystemAdminPin') || '';
+      if (existing) {
+        const check = await fetch(endpoint, { method: 'POST', headers: { 'X-Admin-Pin': existing } });
+        if (check.ok) return true;
+        sessionStorage.removeItem('peopleSystemAdminPin');
+      }
+      const pin = window.prompt(message);
+      if (!pin) return false;
+      const response = await fetch(endpoint, { method: 'POST', headers: { 'X-Admin-Pin': pin } });
+      if (!response.ok) {
+        alert('That PIN was not accepted.');
+        return false;
+      }
+      sessionStorage.setItem('peopleSystemAdminPin', pin);
+      return true;
+    }
+
+    function requireEditPin() {
+      return requirePin('Enter Edit PIN to save this horse record', '/api/admin/edit-check');
+    }
+
+    function requireMasterPin() {
+      return requirePin('Enter Master PIN to delete this horse/person link', '/api/admin/master-check');
+    }
+
+    function filteredHorses() {
+      const stable = stableFilter.value;
+      return stable ? horses.filter(horse => horse.stable_name === stable) : horses;
+    }
+
+    function stableOptions() {
+      const stableNames = [...new Set(horses.map(horse => horse.stable_name).filter(Boolean))].sort();
+      const current = stableFilter.value;
+      stableFilter.innerHTML = '<option value="">All stables</option>' + stableNames.map(stable => `<option value="${escapeHtml(stable)}">${escapeHtml(stable)}</option>`).join('');
+      if (stableNames.includes(current)) stableFilter.value = current;
+    }
+
+    function dateInputValue(value) {
+      return value || '';
+    }
+
+    function displayDate(value) {
+      return value || '-';
+    }
+
+    function renderHorseList() {
+      const visibleHorses = filteredHorses();
+      horseCount.textContent = `${visibleHorses.length} of ${horses.length} horse${horses.length === 1 ? '' : 's'}`;
+      stableOptions();
+      if (!visibleHorses.length) {
+        horseList.innerHTML = '<div class="empty">No horses found.</div>';
+        return;
+      }
+      horseList.innerHTML = visibleHorses.map(horse => `
+        <article class="horse-item ${horse.id === selectedHorseId ? 'active' : ''}" data-horse-id="${horse.id}">
+          <strong>${escapeHtml(horse.name)}</strong>
+          <div class="subtle">${escapeHtml(horse.stable_name || 'No stable set')}</div>
+          <div class="subtle">${horse.race_count} imported race${horse.race_count === 1 ? '' : 's'}${horse.last_seen_date ? ` · Last ${escapeHtml(horse.last_seen_date)}` : ''}${horse.is_active ? '' : ' · Inactive'}</div>
+        </article>
+      `).join('');
+      horseList.querySelectorAll('.horse-item').forEach(item => {
+        item.addEventListener('click', () => loadHorseDetail(Number(item.dataset.horseId)));
+      });
+    }
+
+    function renderDetail(detail) {
+      selectedHorseId = detail.id;
+      renderHorseList();
+      const latestRace = detail.race_history[0];
+      horseDetail.innerHTML = `
+        <div class="detail-grid">
+          <section class="detail-card">
+            <div class="action-row">
+              <div><div class="eyebrow">Horse Record</div><h2>${escapeHtml(detail.name)}</h2></div>
+              <a class="button-link secondary" href="/race-management">Race Management</a>
+            </div>
+            <div class="overview-grid">
+              <div class="metric"><span class="subtle">Stable</span><strong>${escapeHtml(detail.stable_name || '-')}</strong></div>
+              <div class="metric"><span class="subtle">Imported Races</span><strong>${detail.race_history.length}</strong></div>
+              <div class="metric"><span class="subtle">Status</span><strong>${detail.is_active ? 'Active' : 'Inactive'}</strong><span class="subtle">${detail.last_seen_date ? `Last raced ${escapeHtml(detail.last_seen_date)}` : 'No race history yet'}</span></div>
+              <div class="metric"><span class="subtle">Latest Run</span><strong>${latestRace ? `${escapeHtml(latestRace.track)} R${latestRace.race_number}` : '-'}</strong><span class="subtle">${latestRace ? escapeHtml(latestRace.date) : ''}</span></div>
+            </div>
+            <div class="form-grid">
+              <div class="split">
+                <label><div class="eyebrow">Horse Name</div><input id="horse-name" value="${escapeHtml(detail.name)}"></label>
+                <label><div class="eyebrow">Stable</div><input id="horse-stable" value="${escapeHtml(detail.stable_name || '')}" list="stable-list"></label>
+              </div>
+              <textarea id="horse-notes" rows="5" placeholder="Horse notes">${escapeHtml(detail.notes || '')}</textarea>
+              <datalist id="stable-list">${(suggestions.stables || []).map(stable => `<option value="${escapeHtml(stable)}"></option>`).join('')}</datalist>
+              <div class="action-row">
+                <button id="save-horse" class="primary" type="button">Update Horse</button>
+                <button id="reset-horse-form" type="button">Reset Form</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="detail-card">
+            <div><div class="eyebrow">Imported Race History</div><h3>${detail.race_history.length} race${detail.race_history.length === 1 ? '' : 's'}</h3></div>
+            ${detail.race_history.length ? `
+              <div class="history-list">
+                ${detail.race_history.map(race => `
+                  <article class="history-card">
+                    <header>
+                      <div><strong>${escapeHtml(race.track)} R${race.race_number}</strong><div class="subtle">${escapeHtml(race.date)}</div></div>
+                      <span class="number-badge">${race.horse_number || '-'}</span>
+                    </header>
+                    <div class="mini-grid">
+                      <div><div class="eyebrow">Jockey</div><a href="/records?search=${encodeURIComponent(race.jockey_name || '')}">${escapeHtml(race.jockey_name || '-')}</a></div>
+                      <div><div class="eyebrow">Trainer</div><a href="/records?search=${encodeURIComponent(race.trainer_name || '')}">${escapeHtml(race.trainer_name || '-')}</a></div>
+                    </div>
+                    <div class="action-row"><a class="button-link" href="/race-management">Edit Imported Race Day</a></div>
+                  </article>
+                `).join('')}
+              </div>
+            ` : '<div class="empty">No imported race history for this horse.</div>'}
+          </section>
+
+          <section class="detail-card">
+            <div><div class="eyebrow">Associated People</div><h3>Manual links only</h3><p class="subtle">Use this for stable reps or longer-term horse relationships. Imported jockey/trainer race links stay in race history.</p></div>
+            ${detail.associated_people.length ? `
+              <div class="link-list">
+                ${detail.associated_people.map(link => `
+                  <article class="link-card" data-link-id="${link.id}" data-role="${escapeHtml(link.role)}" data-start="${dateInputValue(link.start_date)}" data-end="${dateInputValue(link.end_date)}">
+                    <header>
+                      <div><strong><a href="/records?person=${link.person_id}">${escapeHtml(link.person_name)}</a></strong><div class="subtle">${escapeHtml(link.role)} · ${escapeHtml(displayDate(link.start_date))} - ${escapeHtml(displayDate(link.end_date))}</div></div>
+                    </header>
+                    <div class="split">
+                      <input class="link-role" value="${escapeHtml(link.role)}" placeholder="Role">
+                      <input class="link-start" type="date" value="${dateInputValue(link.start_date)}">
+                    </div>
+                    <div class="split">
+                      <input class="link-end" type="date" value="${dateInputValue(link.end_date)}">
+                      <div class="action-row">
+                        <button class="save-link" type="button">Update Link</button>
+                        <button class="delete-link danger" type="button">Delete Link</button>
+                      </div>
+                    </div>
+                  </article>
+                `).join('')}
+              </div>
+            ` : '<div class="empty">No manual people links. Add stable reps or other long-term links from the person record for now.</div>'}
+          </section>
+        </div>
+      `;
+
+      document.getElementById('save-horse').addEventListener('click', async () => {
+        const payload = {
+          name: document.getElementById('horse-name').value,
+          stable_name: document.getElementById('horse-stable').value || null,
+          notes: document.getElementById('horse-notes').value || null,
+        };
+        const changes = [];
+        if (payload.name.trim() !== detail.name) changes.push(`Name: ${detail.name} -> ${payload.name}`);
+        if ((payload.stable_name || '') !== (detail.stable_name || '')) changes.push(`Stable: ${detail.stable_name || '(blank)'} -> ${payload.stable_name || '(blank)'}`);
+        if ((payload.notes || '') !== (detail.notes || '')) changes.push('Notes will be updated.');
+        if (!changes.length) { alert('No changes to save.'); return; }
+        if (!confirm(`Update horse record?\n\n- ${changes.join('\n- ')}\n\nAre you sure?`)) return;
+        if (!await requireEditPin()) return;
+        const response = await fetch(`/api/horses/${detail.id}`, {
+          method: 'PUT',
+          headers: adminHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) { alert('Horse update failed.'); return; }
+        await loadHorses(searchInput.value);
+        renderDetail(await response.json());
+      });
+
+      document.getElementById('reset-horse-form').addEventListener('click', () => renderDetail(detail));
+
+      horseDetail.querySelectorAll('.save-link').forEach(button => {
+        button.addEventListener('click', async () => {
+          const card = button.closest('.link-card');
+          const payload = {
+            horse_name: detail.name,
+            role: card.querySelector('.link-role').value,
+            start_date: card.querySelector('.link-start').value || null,
+            end_date: card.querySelector('.link-end').value || null,
+          };
+          const changes = [];
+          if (payload.role !== card.dataset.role) changes.push(`Role: ${card.dataset.role} -> ${payload.role}`);
+          if ((payload.start_date || '') !== card.dataset.start) changes.push(`Start: ${displayDate(card.dataset.start)} -> ${displayDate(payload.start_date)}`);
+          if ((payload.end_date || '') !== card.dataset.end) changes.push(`End: ${displayDate(card.dataset.end)} -> ${displayDate(payload.end_date)}`);
+          if (!changes.length) { alert('No link changes to save.'); return; }
+          if (!confirm(`Update horse/person link?\n\n- ${changes.join('\n- ')}\n\nAre you sure?`)) return;
+          if (!await requireEditPin()) return;
+          const response = await fetch(`/api/horse-links/${card.dataset.linkId}`, {
+            method: 'PUT',
+            headers: adminHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) { alert('Link update failed.'); return; }
+          await loadHorseDetail(detail.id);
+        });
+      });
+
+      horseDetail.querySelectorAll('.delete-link').forEach(button => {
+        button.addEventListener('click', async () => {
+          const card = button.closest('.link-card');
+          if (!confirm('Delete this horse/person manual link?\n\nThis does not delete the person or horse.')) return;
+          if (!await requireMasterPin()) { alert('Master PIN required. Delete cancelled.'); return; }
+          const response = await fetch(`/api/horse-links/${card.dataset.linkId}`, { method: 'DELETE', headers: adminHeaders() });
+          if (!response.ok) { alert('Link delete failed.'); return; }
+          await loadHorseDetail(detail.id);
+        });
+      });
+    }
+
+    async function loadHorseDetail(horseId) {
+      const response = await fetch(`/api/horses/${horseId}`);
+      if (!response.ok) {
+        horseDetail.innerHTML = '<div class="empty">Horse not found.</div>';
+        return;
+      }
+      renderDetail(await response.json());
+    }
+
+    async function loadHorses(search = '') {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (showInactive) params.set('include_inactive', 'true');
+      const response = await fetch(`/api/horses${params.toString() ? `?${params}` : ''}`);
+      horses = response.ok ? await response.json() : [];
+      renderHorseList();
+    }
+
+    async function loadSuggestions() {
+      const response = await fetch('/api/suggestions');
+      if (response.ok) suggestions = await response.json();
+    }
+
+    searchInput.addEventListener('input', () => loadHorses(searchInput.value));
+    stableFilter.addEventListener('change', renderHorseList);
+    showInactiveInput.addEventListener('change', () => {
+      showInactive = showInactiveInput.checked;
+      loadHorses(searchInput.value);
+    });
+    loadSuggestions().then(() => loadHorses());
+  </script>
+</body>
+</html>
+

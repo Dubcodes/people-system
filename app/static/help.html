@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>Help | Race Day People Intelligence</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#64707a; --line:rgba(58,73,84,.18); --accent:#9f3f24; --accent-dark:#7e2f1b; --green:#315f48; --blue:#2f4858; --paper:#fffaf2; --wash:#f6f1e7; --bg:#ecdfcf; --danger:#8f2f1d; --warn:#966515; --shadow:0 12px 28px rgba(50,34,16,.10); }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; font-family:Georgia,"Times New Roman",serif; color:var(--ink); background:linear-gradient(135deg,var(--bg),var(--wash)); min-height:100vh; }
+    .page { width:min(1280px,100%); margin:0 auto; padding:18px; display:grid; gap:14px; }
+    .band,.card,.toc { background:rgba(255,250,242,.94); border:1px solid var(--line); border-radius:8px; box-shadow:var(--shadow); }
+    .band { padding:14px; display:grid; gap:12px; min-width:0; }
+    .topbar,.nav,.row,.section-head { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .topbar,.section-head { justify-content:space-between; }
+    .topbar > div:first-child,.section-head > div:first-child { min-width:240px; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.14em; font-size:11px; color:var(--accent); margin-bottom:3px; }
+    h1,h2,h3,h4,p { margin:0; }
+    h1 { font-size:28px; line-height:1.1; }
+    h2 { font-size:21px; line-height:1.2; }
+    h3 { font-size:17px; line-height:1.2; }
+    h4 { font-size:15px; line-height:1.2; }
+    p,li { line-height:1.48; }
+    a { color:var(--accent-dark); }
+    .subtle { color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+    .button-link { font:inherit; border-radius:8px; padding:9px 11px; border:1px solid var(--line); min-height:40px; background:#f1e5d3; color:var(--ink); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+    .button-link.primary { background:var(--accent-dark); color:white; border-color:transparent; }
+    .button-link.secondary { background:var(--blue); color:white; border-color:transparent; }
+    .layout { display:grid; grid-template-columns:260px minmax(0,1fr); gap:14px; align-items:start; }
+    .toc { position:sticky; top:12px; padding:12px; display:grid; gap:8px; }
+    .toc a { text-decoration:none; color:var(--ink); padding:7px 8px; border-radius:7px; border:1px solid transparent; }
+    .toc a:hover { background:white; border-color:var(--line); }
+    .content { display:grid; gap:14px; min-width:0; }
+    .card { padding:14px; display:grid; gap:12px; min-width:0; }
+    .overview-grid,.page-grid,.term-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+    .media-grid { display:grid; grid-template-columns:1fr; gap:14px; }
+    .media-card { border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.56); padding:11px; display:grid; align-content:start; gap:8px; min-width:0; }
+    .media-card.hidden { display:none; }
+    .media-card img,.media-card video { width:100%; border-radius:7px; border:1px solid var(--line); display:block; }
+    .media-card img { height:auto; background:#efe2d0; }
+    .media-card video { aspect-ratio:var(--media-ratio, 16 / 9); object-fit:contain; background:#151515; max-height:min(76vh,720px); cursor:pointer; }
+    .media-card.image-card { width:min(100%, var(--image-card-width, 980px)); justify-self:center; }
+    .media-card.tall-image img { max-height:min(82vh,900px); object-fit:contain; background:#151515; }
+    .mini { border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.56); padding:11px; display:grid; gap:6px; min-width:0; }
+    .mini strong { color:var(--accent-dark); }
+    .callout { border-left:4px solid var(--green); background:rgba(255,255,255,.6); padding:11px 12px; border-radius:0 8px 8px 0; }
+    .warn-callout { border-left-color:var(--warn); }
+    .danger-callout { border-left-color:var(--danger); }
+    ol,ul { margin:0; padding-left:22px; }
+    details { border:1px solid var(--line); border-radius:8px; padding:10px; background:rgba(255,255,255,.52); }
+    summary { cursor:pointer; font-weight:bold; }
+    code { background:rgba(255,255,255,.72); border:1px solid var(--line); border-radius:6px; padding:1px 5px; }
+    .status { display:inline-flex; border:1px solid var(--line); border-radius:999px; padding:3px 7px; background:white; color:var(--muted); font-size:12px; }
+    @media (max-width:900px) { .layout { grid-template-columns:1fr; } .toc { position:static; } }
+    @media (max-width:650px) { .page { padding:10px; } .button-link { width:100%; } .nav { width:100%; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="band">
+      <div class="topbar">
+        <div>
+          <div class="eyebrow">Help</div>
+          <h1>Help Guide</h1>
+          <p class="subtle">Start here when you are setting up for race day, showing someone new around, or trying to work out why something looks odd.</p>
+        </div>
+        <div class="nav">
+          <a class="button-link secondary" href="/">Viewer</a>
+          <a class="button-link" href="/loveracing">LOVERACING</a>
+          <a class="button-link" href="/race-management">Race Management</a>
+          <a class="button-link" href="/settings">Settings</a>
+          <a class="button-link primary" href="/help.html" aria-label="Help" title="Help">?</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <nav class="toc" aria-label="Help sections">
+        <strong>Contents</strong>
+        <a href="#overview">Start Here</a>
+        <a href="#media">Screenshots And Clips</a>
+        <a href="#pages">Which Page?</a>
+        <a href="#viewer">Main Viewer</a>
+        <a href="#loveracing">LOVERACING</a>
+        <a href="#race-management">Race Management</a>
+        <a href="#people">People And Images</a>
+        <a href="#settings">Settings</a>
+        <a href="#safety">Safety And Undo</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+        <a href="#terms">Common Terms</a>
+      </nav>
+
+      <section class="content">
+        <article class="card" id="overview">
+          <div class="section-head">
+            <div><div class="eyebrow">Start Here</div><h2>The Short Version</h2></div>
+          </div>
+          <p>This system is here to answer one race-day question quickly: who is involved, where are they involved, and what should the screen show right now?</p>
+          <p>You do not need to understand the database to use it. Most people will live in the Viewer. The LOVERACING page is for loading the day's official race data. The admin-style pages are there when something needs tidying, checking, or undoing.</p>
+          <div class="callout">
+            Most race days should become automatic: LOVERACING checks the calendar, matched meetings appear as candidates, and imported data drives the Viewer. The manual controls are there for checking, correcting, and recovery when something needs a human.
+          </div>
+          <div class="overview-grid">
+            <div class="mini"><strong>If you are running the screen</strong><span>Open the Viewer, pick or follow a race, and search for people as needed.</span></div>
+            <div class="mini"><strong>If you are loading race data</strong><span>Open LOVERACING, preview the meeting, then import when it looks right.</span></div>
+            <div class="mini"><strong>If something looks wrong</strong><span>Check LOVERACING first, then Race Management. Undo the meeting import if needed.</span></div>
+            <div class="mini"><strong>If a person looks wrong</strong><span>Use Manage People or Image Ingest to improve names, aliases, visibility, and photos.</span></div>
+          </div>
+          <div class="callout warn-callout">
+            The useful mental model: LOVERACING is the official source for race-day fields. This app keeps a local working copy so the Viewer can keep running even if the internet, LOVERACING, or an import has a bad moment.
+          </div>
+        </article>
+
+        <article class="card" id="media">
+          <div><div class="eyebrow">Examples</div><h2>Screenshots And Demo Clips</h2></div>
+          <p>These short examples show the main race-day workflows. The videos loop silently like moving screenshots, and you can click one to pause or play it again.</p>
+          <div class="media-grid">
+            <div class="media-card image-card" style="--image-card-width:980px">
+              <img data-help-media src="/help-media/mainViewerScreenLayout.help.png" alt="Main viewer screen layout">
+              <h3>Main Viewer Layout</h3>
+              <p class="subtle">This is the screen most people will use during a race day. The top row holds the race controls, Auto mode, search, and small utility buttons. The middle area shows the current race or pre-race group, and the lower roster lets you find people by role, region, or photo status. The quick-look panel on the right opens when you select a person.</p>
+            </div>
+            <div class="media-card">
+              <video data-help-media src="/help-media/Operator%20view%20People%20app%20demostration.mp4" autoplay muted loop playsinline preload="auto" style="--media-ratio:1280 / 720"></video>
+              <h3>Operator View</h3>
+              <p class="subtle">The Operator page follows what the Viewer is doing, so a second screen can stay in step with the main screen. When someone is selected on the Viewer, they appear large on the Operator view. The operator can also click a tile to add an orange highlight, making it easy for both screens to point at the same person without changing the selected race.</p>
+            </div>
+            <div class="media-card">
+              <video data-help-media src="/help-media/add%20to%20pre%20day%20People%20app%20demostration.mp4" autoplay muted loop playsinline preload="auto" style="--media-ratio:900 / 590"></video>
+              <h3>Add People To Pre-Race</h3>
+              <p class="subtle">Use this when someone should appear in the pre-race group even though they are not attached to a specific runner. Select the person from the Viewer, use the quick-look action to add them to pre-race, and they will stay available in that pre-race context for the selected date and track.</p>
+            </div>
+            <div class="media-card">
+              <video data-help-media src="/help-media/single%20image%20ingest%20People%20app%20demostration.mp4" autoplay muted loop playsinline preload="auto" style="--media-ratio:1280 / 520"></video>
+              <h3>Single Image Ingest</h3>
+              <p class="subtle">Use Image Ingest for one photo at a time. Drop or choose the image, fill the person name and useful metadata, then save it. If the file name already matches a person, the page can suggest that record so you do not have to type everything again.</p>
+            </div>
+            <div class="media-card">
+              <video data-help-media src="/help-media/Batch%20image%20ingestPeople%20app%20demostration%20v2.mp4" autoplay muted loop playsinline preload="auto" style="--media-ratio:1280 / 720"></video>
+              <h3>Bulk Image Ingest</h3>
+              <p class="subtle">Bulk Ingest is best when you have a folder of named images. Drop the files together, review the suggested person matches, leave only the useful images selected, and either process the checked images now or upload them to the shared Pending Queue. Pending uploads stay unassigned unless you deliberately choose a target region on the row.</p>
+            </div>
+            <div class="media-card">
+              <video data-help-media src="/help-media/manual%20race%20ingest%20People%20app%20demostration.mp4" autoplay muted loop playsinline preload="auto" style="--media-ratio:1280 / 600"></video>
+              <h3>Manual Race Ingest</h3>
+              <p class="subtle">This is the fallback race import method. Copy each race from the source page, paste it into the matching race box, and preview the result before saving. LOVERACING import is preferred for current race days, but manual import is still useful when you are working from older race data or a source the auto-loader does not support.</p>
+            </div>
+            <div class="media-card image-card tall-image" style="--image-card-width:760px">
+              <img data-help-media src="/help-media/loveracingAutoLoader.png" alt="LOVERACING auto loader page screenshot">
+              <h3>LOVERACING Auto Loader</h3>
+              <p class="subtle">This page is where official race-day data is discovered, previewed, imported, audited, and undone. The top area shows automation status and manual preview/import controls. Calendar candidates let you inspect upcoming meetings before import. Import Scope decides which courses can be matched automatically and which region they land in.</p>
+            </div>
+            <div class="media-card image-card" style="--image-card-width:760px">
+              <img data-help-media src="/help-media/settingScreenScreenShot.help.png" alt="Settings screen screenshot">
+              <h3>Settings Screen</h3>
+              <p class="subtle">Settings is for display behaviour and race-day convenience tools, not heavy importing or cleanup. Use it to adjust how this screen opens, apply or clear a date override for testing, change theme colours, add manual attendees to pre-race or a race, and check a read-only summary of local imported race days.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="card" id="pages">
+          <div><div class="eyebrow">Pages</div><h2>Which Page Should I Use?</h2></div>
+          <div class="page-grid">
+            <div class="mini"><h3>Viewer</h3><p>Use this on race day. It is the main screen for finding people and following the current race.</p></div>
+            <div class="mini"><h3>Operator</h3><p>Use this when a second screen needs to follow the main viewer or highlight a person. The search icon opens live suggestions, and the all-records toggle is available at the top and bottom.</p></div>
+            <div class="mini"><h3>Image Ingest</h3><p>Use this when you have a photo to add to a person record. If the file name looks like an existing person, it can suggest that record for you.</p></div>
+            <div class="mini"><h3>Manage People</h3><p>Use this when a name, alias, visibility setting, or person record needs fixing.</p></div>
+            <div class="mini"><h3>Horses</h3><p>Use this when you want to check a horse and the people linked to it.</p></div>
+            <div class="mini"><h3>Import Races</h3><p>Use this only for older/manual race imports. You can preview pasted data without writing; committing it needs the Master PIN.</p></div>
+            <div class="mini"><h3>Race Management</h3><p>Use this to review race data that is already in the system.</p></div>
+            <div class="mini"><h3>LOVERACING</h3><p>Use this to discover, preview, import, undo, and audit official race-day data.</p></div>
+            <div class="mini"><h3>Settings</h3><p>Use this to change how this browser's viewer behaves and looks.</p></div>
+            <div class="mini"><h3>Admin</h3><p>Use this for master-only maintenance: backups, audit history, track aliases, safe table editing, thumbnails, and regional PINs.</p></div>
+          </div>
+        </article>
+
+        <article class="card" id="viewer">
+          <div><div class="eyebrow">Main Viewer</div><h2>The Screen Most People Will Use</h2></div>
+          <p>The Viewer is meant to feel simple in the middle of a busy day. Pick a race, search for a person, open quick details, and keep moving. Import and maintenance tools live elsewhere so this screen does not get crowded.</p>
+          <details open>
+            <summary>Race selector and Auto Race Mode, in plain terms</summary>
+            <ul>
+              <li><code>AUTO: ON</code> means the screen follows the next race for you.</li>
+              <li><code>AUTO: OFF</code> means you choose the race yourself and the screen stays there.</li>
+              <li>If someone clicks a track, Pre, or a race while auto is on, Auto turns off immediately.</li>
+              <li>Turn <code>AUTO: ON</code> again when you want the viewer to follow the official race times.</li>
+            </ul>
+          </details>
+          <details>
+            <summary>Search and people tiles</summary>
+            <p>Use the search box when someone asks for a person quickly. It checks names, aliases, and stable-style text. The small half-filled circle near the Settings button controls whether people without images are shown. That choice is global, so the Viewer and Operator screen stay in step.</p>
+          </details>
+          <details>
+            <summary>Quick-look panel</summary>
+            <p>The quick-look panel is the fast answer panel. It shows the selected person, image, race involvement, notes, and a link to the full record. If LOVERACING supplied silk data, the horse's silk appears beside the horse name. Hover it to see the official colour description.</p>
+          </details>
+          <details>
+            <summary>Pre-race people</summary>
+            <p>Pre-race is manual-led. The system no longer fills this panel with every presenter or staff record, because some people are studio-only or venue-specific. Add the people you expect on track from the Viewer quick-look panel or the Manual Attendees tool in Settings.</p>
+          </details>
+          <details>
+            <summary>Stale data warnings</summary>
+            <p>If an import failed or the data is getting old, the Viewer should keep showing the last good race data and quietly warn you. That is intentional. A stale warning is better than an empty race-day screen.</p>
+          </details>
+        </article>
+
+        <article class="card" id="loveracing">
+          <div><div class="eyebrow">LOVERACING</div><h2>Race-Day Auto Loader</h2></div>
+          <p>This is the control room for official race-day data. Use it when you want to see what the system found, check a meeting before import, or undo a meeting import that was not right.</p>
+          <div class="term-grid">
+            <div class="mini"><h3>Tagged courses</h3><p>The local courses the system is allowed to care about.</p></div>
+            <div class="mini"><h3>Calendar candidates</h3><p>Meetings the system found on the LOVERACING calendar.</p></div>
+            <div class="mini"><h3>Imported meetings</h3><p>Meetings already loaded into this app.</p></div>
+            <div class="mini"><h3>Last check</h3><p>The last time the system looked for meetings.</p></div>
+          </div>
+          <details open>
+            <summary>Automation controls, without the scary bit</summary>
+            <ul>
+              <li><code>Auto check calendar at 5:00 AM</code> means the system can look each morning without you pressing anything.</li>
+              <li><code>Auto import matched meetings</code> means matched meetings can write race data by themselves. When this is on, imported meetings are also refreshed during race day, including a 7:00 AM scratchings check, occasional daytime freshness checks, and the normal pre-race checks.</li>
+              <li><code>Check Calendar Now</code> looks for meetings now. It does not import unless auto-import is enabled or you click an import action.</li>
+              <li><code>Force import when unchanged</code> is for the rare case where you want to rewrite data even though the source page looks unchanged.</li>
+            </ul>
+          </details>
+          <details>
+            <summary>Manual preview and import</summary>
+            <ol>
+              <li>Paste a LOVERACING meeting overview URL.</li>
+              <li>Choose the target region.</li>
+              <li>Click <code>Preview</code> and check the meeting, race count, runner count, and warnings.</li>
+              <li>If it looks right, click <code>Import</code>.</li>
+            </ol>
+          </details>
+          <details>
+            <summary>Import Scope: Tagged Racecourses And Regions</summary>
+            <p>This is the list of courses the system is allowed to pull in automatically. A course with <code>Import</code> turned on can be matched from the calendar. <code>LOVERACING match</code> is the name the system looks for. <code>Region</code> is where the meeting should land by default. If the calendar shows an unmatched meeting, use <code>Add Course</code> on that candidate or add the course manually in this section, then run the calendar check again.</p>
+          </details>
+          <details>
+            <summary>Snapshots and audit runs</summary>
+            <p>The audit history is there so we can answer "what happened?" later. Every successful fetch keeps the raw source, a content hash, parser version, timing, warnings, and status. Old failures may stay visible as history, but if a newer run succeeded, those older failures are not current problems.</p>
+          </details>
+          <details>
+            <summary>Trainer name warnings</summary>
+            <p>Some LOVERACING trainer fields use initials, especially partnership names such as <code>G A &amp; D G Rogerson &amp; Clint Isdale</code>. The importer keeps the race data, expands the obvious shared surname where it can, adds an import warning, and marks those records with a small review chip in the Viewer and Manage People. If LOVERACING includes a training location after a comma, such as <code>Peter Coutts, Te Awamutu</code>, the importer treats the comma text as location metadata and keeps the person name as <code>Peter Coutts</code>.</p>
+          </details>
+          <div class="callout warn-callout">
+            LOVERACING sometimes hides useful race details behind Open/Close sections. The importer is built to read the source and detail pages, not just whatever happens to be visible on screen.
+          </div>
+        </article>
+
+        <article class="card" id="race-management">
+          <div><div class="eyebrow">Race Management</div><h2>Checking What Is Already Loaded</h2></div>
+          <p>Race Management is not usually the first place to go. Think of it as the inspection bench for race data that has already been imported.</p>
+          <ul>
+            <li>Use it to review imported meetings, races, and entries.</li>
+            <li>Use the silk catalog to browse captured silk images and their LOVERACING descriptions.</li>
+            <li>Use LOVERACING for new official race-day imports where possible.</li>
+            <li>If a meeting import is wrong, go back to LOVERACING, undo that meeting's races, then preview and import again.</li>
+          </ul>
+        </article>
+
+        <article class="card" id="people">
+          <div><div class="eyebrow">People And Images</div><h2>Keeping The Human Side Tidy</h2></div>
+          <details open>
+            <summary>Manage People</summary>
+            <p>Manage People is where you clean up the names people actually search for. You can open and read records without unlocking the page. When you try to save, delete, merge, or change linked data, the page asks for the appropriate PIN. If two records are the same person, use Duplicate Cleanup to merge the old record into the one you want to keep. This is useful for married-name changes while preserving the other name as an alias.</p>
+            <p>Keep roles simple on purpose. If the broadcast says someone is a co-trainer, mark them as <code>Trainer</code> in this database so the race-day filters stay easy to use. Put extra context in Notes instead, such as "CEO of Ellerslie" for a racecourse CEO who is otherwise marked as Staff.</p>
+          </details>
+          <details>
+            <summary>Image Ingest</summary>
+            <p>Image Ingest is for attaching photos to people. A good photo can save a lot of time on race day because the team can recognise someone before reading the details. When you choose a file, the page checks the file name against existing person records. If it finds one clear match, a small suggestion appears beside the file picker. Click it to fill the person fields from that record, or ignore it and enter the details normally.</p>
+          </details>
+          <details>
+            <summary>Bulk Ingest</summary>
+            <p>Bulk Ingest is for a folder-sized batch. You can review local dropped files immediately, or upload them into the shared Pending Queue so someone can process them later. Pending uploads record who uploaded them, but they stay <code>For Unassigned</code> unless you choose a target region on that image row. Processing and saving images needs the Edit PIN. Deleting pending queue items needs the Master PIN. The queue keeps a file hash so the same file is not uploaded twice as an active pending item.</p>
+          </details>
+          <details>
+            <summary>Horses</summary>
+            <p>The Horses page helps you check horse records and the people linked to them. Trainer partnerships from LOVERACING are preserved carefully, because splitting names too aggressively can create bad records.</p>
+          </details>
+        </article>
+
+        <article class="card" id="settings">
+          <div><div class="eyebrow">Settings</div><h2>Making This Screen Behave</h2></div>
+          <ul>
+            <li><strong>Viewer defaults:</strong> decide how this browser's viewer opens.</li>
+            <li><strong>Auto Race Mode:</strong> chooses whether this screen starts in automatic race-following mode.</li>
+            <li><strong>Race Date Override:</strong> helps when you are testing a meeting from another date. Applying it shows a warning and clearing it puts the screen back on the real race day.</li>
+            <li><strong>Theme colors:</strong> let you tune the look for a venue, screen, or preference. Quick-click a preset to load it; long-hold a preset to save the current colours after confirmation.</li>
+            <li><strong>Manual attendees:</strong> add or remove people from pre-race or a selected race without needing a PIN.</li>
+            <li><strong>Local race info:</strong> shows compact read-only recent and upcoming race days for this region.</li>
+          </ul>
+          <div class="callout">
+            Most Settings controls are saved in the browser you are using. The global show/hide people-without-images option is shared so Viewer and Operator screens stay in step.
+          </div>
+        </article>
+
+        <article class="card" id="safety">
+          <div><div class="eyebrow">Safety</div><h2>What Is Safe To Press?</h2></div>
+          <div class="overview-grid">
+            <div class="mini"><h3>Preview is safe</h3><p>Preview looks at the data without importing races or changing the live race-day view.</p></div>
+            <div class="mini"><h3>Import writes data</h3><p>Import updates the local meeting, races, runners, and involvement.</p></div>
+            <div class="mini"><h3>Undo Races is targeted</h3><p>It removes imported races and entries for that meeting. It does not delete your people database.</p></div>
+            <div class="mini"><h3>Last good data stays</h3><p>If LOVERACING fails, the Viewer should keep using the last successful import.</p></div>
+            <div class="mini"><h3>PINs protect writes</h3><p>Viewer quick-adds and manual attendee actions are open for race-day speed. Normal record maintenance asks for the Edit PIN. Deletes, merges, imports, cleanup, recovery, and system maintenance ask for the Master PIN.</p></div>
+            <div class="mini"><h3>PINs are regional</h3><p>Admin can set Edit and Master PINs for the current app region. Old global PIN overrides may still exist as legacy fallbacks, and environment/default PINs remain available for recovery if regional values are forgotten.</p></div>
+            <div class="mini"><h3>Backups run weekly</h3><p>The system keeps weekly automatic database backups and rotates the newest four. Manual backups made in Admin stay until someone deletes them.</p></div>
+          </div>
+          <div class="callout danger-callout">
+            When an import is wrong, do not start deleting people or horses. Undo the meeting's races, then preview and import again.
+          </div>
+        </article>
+
+        <article class="card" id="troubleshooting">
+          <div><div class="eyebrow">Troubleshooting</div><h2>When Something Feels Off</h2></div>
+          <details open>
+            <summary>I expected a meeting, but it is not showing</summary>
+            <ol>
+              <li>Open LOVERACING and click <code>Check Calendar Now</code>.</li>
+              <li>Check whether the course is listed in Import Scope and has <code>Import</code> turned on.</li>
+              <li>Confirm the LOVERACING match name matches the venue wording from the calendar.</li>
+              <li>If discovery still misses it, paste the meeting URL into Manual Preview and import it manually.</li>
+            </ol>
+          </details>
+          <details>
+            <summary>I can see old failed import runs</summary>
+            <p>That is usually just history. If a newer successful run appears above them, the current importer is working. Turn on failed history only when you need to inspect old errors.</p>
+          </details>
+          <details>
+            <summary>The Viewer is on the wrong race</summary>
+            <ol>
+              <li>Check whether Auto Race Mode is on or off.</li>
+              <li>Check the imported race start times on Race Management or LOVERACING preview.</li>
+              <li>Clear any Race Date Override in Settings unless you are testing another date.</li>
+              <li>Turn Auto back on if the viewer was manually moved to another race.</li>
+            </ol>
+          </details>
+          <details>
+            <summary>A runner, jockey, or trainer looks wrong</summary>
+            <ol>
+              <li>Preview the meeting again on the LOVERACING page.</li>
+              <li>Check whether the source page changed after the last import.</li>
+              <li>If auto import is on, the system should refresh current-day meetings from 7:00 AM and then through the day. Use manual import if you need to pull the latest page immediately.</li>
+              <li>Use force import only if the source appears unchanged but you still need to rewrite the local data.</li>
+              <li>If the meeting was imported incorrectly, Undo Races and import again.</li>
+            </ol>
+          </details>
+        </article>
+
+        <article class="card" id="terms">
+          <div><div class="eyebrow">Reference</div><h2>Words The System Uses</h2></div>
+          <div class="term-grid">
+            <div class="mini"><span class="status">Meeting</span><p>A race-day event at a venue, such as Matamata RC @ Matamata.</p></div>
+            <div class="mini"><span class="status">Race</span><p>One scheduled race within a meeting, with a race number, name, start time, conditions, and distance.</p></div>
+            <div class="mini"><span class="status">Runner</span><p>A horse entered in a race. It may have a number, barrier, rating, weight, jockey, trainer, odds, and status.</p></div>
+            <div class="mini"><span class="status">Scratched</span><p>A runner removed from the race. Scratched runners may not have jockeys or odds.</p></div>
+            <div class="mini"><span class="status">Ballot</span><p>A runner marked with a ballot suffix such as B1 or B2.</p></div>
+            <div class="mini"><span class="status">Region</span><p>The local app region where imported data belongs, such as Northern, Central, Christchurch, or Dunedin.</p></div>
+            <div class="mini"><span class="status">Snapshot</span><p>The saved raw LOVERACING HTML used for an import or preview.</p></div>
+            <div class="mini"><span class="status">Content hash</span><p>A fingerprint of the source page. If the hash has not changed, the importer can skip unnecessary rewrites.</p></div>
+            <div class="mini"><span class="status">Notes</span><p>Free-text context that should not become a role or filter, such as CEO titles, broadcast wording, or why a person was marked a certain way.</p></div>
+          </div>
+        </article>
+      </section>
+    </div>
+  </main>
+  <script>
+    document.querySelectorAll('[data-help-media]').forEach(media => {
+      const hide = () => media.closest('.media-card')?.classList.add('hidden');
+      media.addEventListener('error', hide);
+      media.querySelectorAll?.('source').forEach(source => source.addEventListener('error', hide));
+      window.addEventListener('load', () => {
+        if (media.error) hide();
+      });
+    });
+    document.querySelectorAll('video[data-help-media]').forEach(video => {
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      const start = () => video.play().catch(() => {});
+      video.addEventListener('loadedmetadata', start);
+      video.addEventListener('canplay', start);
+      video.addEventListener('click', () => {
+        if (video.paused) start();
+        else video.pause();
+      });
+      start();
+      setTimeout(start, 500);
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>Bulk Ingest | Race Day People Intelligence</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#6b7280; --line:rgba(120,98,69,.2); --accent:#b94b2a; --accent-dark:#8f351d; --button:#f1e5d3; --green:#315f48; --blue:#2f4858; --bg-a:#ecdfcf; --bg-b:#f6f1e7; --panel:rgba(255,250,242,.95); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Georgia,"Times New Roman",serif; color:var(--ink); background:linear-gradient(135deg,var(--bg-a),var(--bg-b)); min-height:100vh; }
+    .page { width:min(1320px,100%); margin:0 auto; padding:18px; display:grid; gap:14px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; display:grid; gap:12px; }
+    .topbar,.nav,.row,.actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+    .nav,.actions { justify-content:flex-start; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.14em; font-size:11px; color:var(--accent); margin-bottom:4px; }
+    h1,h2,h3,p { margin:0; }
+    h1 { font-size:25px; }
+    h2 { font-size:19px; }
+    .subtle { color:var(--muted); font-size:13px; }
+    input,select,textarea,button,.button-link { font:inherit; border-radius:8px; padding:9px 11px; border:1px solid var(--line); min-width:0; }
+    input,select,textarea { width:100%; background:white; }
+    button,.button-link { background:var(--button); color:var(--ink); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+    button.primary,.button-link.primary { background:var(--accent-dark); color:white; border-color:transparent; }
+    button.secondary,.button-link.secondary { background:var(--blue); color:white; border-color:transparent; }
+    button.danger { background:#8f2f1d; color:white; border-color:transparent; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    .drop-zone { border:2px dashed rgba(49,95,72,.4); border-radius:12px; padding:22px; background:rgba(255,255,255,.58); text-align:center; display:grid; gap:10px; }
+    .drop-zone.drag { border-color:var(--green); background:rgba(49,95,72,.08); }
+    .queue { display:grid; gap:10px; }
+    .item { display:grid; grid-template-columns:96px minmax(0,1fr); gap:12px; border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,.65); padding:10px; transition:background .14s ease,border-color .14s ease,box-shadow .14s ease,opacity .14s ease; }
+    .item.included { border-color:rgba(49,95,72,.45); background:rgba(255,255,255,.84); box-shadow:0 0 0 2px rgba(49,95,72,.1); }
+    .item.saved { opacity:.82; }
+    .thumb { width:96px; aspect-ratio:4/3; object-fit:cover; border-radius:8px; border:1px solid var(--line); background:#efe2d0; cursor:zoom-in; }
+    .image-lightbox { width:min(1100px,calc(100vw - 32px)); max-height:calc(100vh - 32px); padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
+    .image-lightbox::backdrop { background:rgba(20,24,28,.78); }
+    .image-lightbox-layout { display:grid; gap:10px; }
+    .image-lightbox-header { display:flex; gap:10px; align-items:center; justify-content:space-between; }
+    .image-lightbox-title { min-width:0; overflow-wrap:anywhere; }
+    .image-lightbox img { display:block; width:100%; max-height:calc(100vh - 110px); object-fit:contain; background:#181818; border-radius:6px; }
+    .item-grid { display:grid; grid-template-columns:1.2fr .75fr .9fr .9fr .75fr; gap:8px; align-items:end; }
+    .item-meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
+    .pill { border:1px solid var(--line); border-radius:999px; padding:4px 8px; background:white; font-size:12px; color:var(--muted); }
+    .pill.ok { color:var(--green); border-color:rgba(49,95,72,.35); }
+    .pill.warn { color:#8a5a00; border-color:rgba(138,90,0,.35); }
+    .pill.error { color:#8f2f1d; border-color:rgba(143,47,29,.35); background:rgba(143,47,29,.06); }
+    .include-toggle { display:inline-flex; align-items:center; gap:9px; border:1px solid rgba(49,95,72,.34); border-radius:999px; padding:7px 11px; background:rgba(49,95,72,.08); color:var(--green); font-size:13px; font-weight:bold; line-height:1; cursor:pointer; user-select:none; }
+    .include-toggle input { width:24px; height:24px; margin:0; accent-color:var(--green); cursor:pointer; }
+    .include-toggle.off { background:white; color:var(--muted); border-color:var(--line); font-weight:normal; }
+    .include-toggle input:disabled,.include-toggle.off input:disabled { cursor:not-allowed; }
+    .include-toggle.select-all { padding:8px 12px; font-size:14px; }
+    .mini-select { width:auto; min-width:156px; border-radius:999px; padding:5px 9px; background:white; color:var(--muted); font-size:12px; }
+    .pending-region-control { display:inline-flex; flex-wrap:wrap; gap:6px; align-items:center; }
+    .pending-region-control .mini-select { min-width:170px; }
+    .pending-region-control button { padding:5px 9px; font-size:12px; border-radius:999px; }
+    .suggestion { font-size:13px; }
+    .status { border:1px solid var(--line); border-radius:10px; padding:10px; background:rgba(255,255,255,.65); }
+    .empty { border:1px dashed var(--line); border-radius:10px; padding:16px; text-align:center; color:var(--muted); background:rgba(255,255,255,.45); }
+    @media (max-width:900px) { .item,.item-grid { grid-template-columns:1fr; } .thumb { width:100%; max-width:240px; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="panel">
+      <div class="topbar">
+        <div>
+          <div class="eyebrow">Bulk Image Ingest</div>
+          <h1>Review a batch before saving</h1>
+          <p class="subtle">Drop a folder-sized batch, keep the good images checked, fill the missing names, then save selected images or upload them to the shared pending queue.</p>
+        </div>
+        <div class="nav">
+          <a class="button-link secondary" href="/">Viewer</a>
+          <a class="button-link" href="/ingest">Image Ingest</a>
+          <a class="button-link primary" href="/bulk-ingest">Bulk Ingest</a>
+          <a class="button-link" href="/records">Manage People</a>
+          <a class="button-link" href="/help.html" aria-label="Help" title="Help">?</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div id="drop-zone" class="drop-zone">
+        <div><strong>Drop images here</strong></div>
+        <p class="subtle">Filename matching will suggest existing people when it can. Pending images stay unassigned unless you choose a region for another team to handle.</p>
+        <div class="actions">
+          <input id="file-input" type="file" accept="image/*" multiple>
+          <button id="upload-pending" type="button">Upload To Pending</button>
+          <button class="primary" id="save-selected" type="button">Process Selected</button>
+          <button id="clear-saved" type="button">Clear Saved</button>
+        </div>
+      </div>
+      <div class="row">
+        <div id="status" class="status subtle">Load a batch to begin.</div>
+        <div class="actions">
+          <label class="include-toggle select-all"><input id="select-all" type="checkbox" checked> Include all</label>
+          <select id="default-region"></select>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div><div class="eyebrow">Queue</div><h2>Images To Review</h2></div>
+      <div id="queue" class="queue"><div class="empty">No images loaded yet.</div></div>
+    </section>
+
+    <section class="panel">
+      <div class="row">
+        <div><div class="eyebrow">Pending Queue</div><h2>Shared Unprocessed Images</h2></div>
+        <div class="actions">
+          <select id="pending-filter">
+            <option value="pending">All pending</option>
+            <option value="my-region">My region</option>
+            <option value="uploaded-by-this-region">Uploaded by this region</option>
+            <option value="unassigned">Unassigned</option>
+            <option value="done">Processed/skipped</option>
+          </select>
+          <button id="refresh-pending" type="button">Refresh Pending</button>
+        </div>
+      </div>
+      <p class="subtle">Use Load Into Review for images that belong to this region or are unassigned. Use Skip for unusable images. Delete is Master-only.</p>
+      <div id="pending-list" class="queue"><div class="empty">Pending images are loading.</div></div>
+    </section>
+  </main>
+
+  <dialog id="image-lightbox" class="image-lightbox">
+    <div class="image-lightbox-layout">
+      <div class="image-lightbox-header">
+        <strong id="image-lightbox-title" class="image-lightbox-title">Image preview</strong>
+        <button id="image-lightbox-close" type="button" aria-label="Close image preview">Close</button>
+      </div>
+      <img id="image-lightbox-image" alt="Enlarged image preview">
+    </div>
+  </dialog>
+
+  <datalist id="people-list"></datalist>
+  <datalist id="roles-list"></datalist>
+  <datalist id="stables-list"></datalist>
+  <datalist id="locations-list"></datalist>
+  <datalist id="aliases-list"></datalist>
+
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const queueEl = document.getElementById('queue');
+    const statusEl = document.getElementById('status');
+    const saveSelectedBtn = document.getElementById('save-selected');
+    const uploadPendingBtn = document.getElementById('upload-pending');
+    const clearSavedBtn = document.getElementById('clear-saved');
+    const selectAll = document.getElementById('select-all');
+    const defaultRegion = document.getElementById('default-region');
+    const pendingFilter = document.getElementById('pending-filter');
+    const pendingList = document.getElementById('pending-list');
+    const refreshPendingBtn = document.getElementById('refresh-pending');
+    const imageLightbox = document.getElementById('image-lightbox');
+    const imageLightboxImage = document.getElementById('image-lightbox-image');
+    const imageLightboxTitle = document.getElementById('image-lightbox-title');
+    const imageLightboxClose = document.getElementById('image-lightbox-close');
+    let queue = [];
+    let suggestions = { people: [], roles: [], stables: [], locations: [], aliases: [], regions: [] };
+    let overviewPeople = [];
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    }
+
+    function optionValue(value) {
+      return escapeHtml(value).replace(/"/g, '&quot;');
+    }
+
+    function openImageLightbox(src, title) {
+      imageLightboxImage.src = src;
+      imageLightboxImage.alt = title || 'Enlarged image preview';
+      imageLightboxTitle.textContent = title || 'Image preview';
+      imageLightbox.showModal();
+    }
+
+    async function requireEditPin() {
+      const existing = sessionStorage.getItem('peopleSystemAdminPin') || '';
+      if (existing) {
+        const existingResponse = await fetch('/api/admin/edit-check', { method:'POST', headers:{ 'X-Admin-Pin': existing } });
+        if (existingResponse.ok) return true;
+        sessionStorage.removeItem('peopleSystemAdminPin');
+      }
+      const pin = window.prompt('Enter Edit PIN to save or process this batch');
+      if (!pin) return false;
+      const response = await fetch('/api/admin/edit-check', { method:'POST', headers:{ 'X-Admin-Pin': pin } });
+      if (!response.ok) {
+        alert('That PIN was not accepted.');
+        return false;
+      }
+      sessionStorage.setItem('peopleSystemAdminPin', pin);
+      return true;
+    }
+
+    function adminHeaders(extra = {}) {
+      return { 'X-Admin-Pin': sessionStorage.getItem('peopleSystemAdminPin') || '', ...extra };
+    }
+
+    async function requireMasterPin() {
+      const existing = sessionStorage.getItem('peopleSystemAdminPin') || '';
+      if (existing) {
+        const existingResponse = await fetch('/api/admin/master-check', { method:'POST', headers:{ 'X-Admin-Pin': existing } });
+        if (existingResponse.ok) return true;
+        sessionStorage.removeItem('peopleSystemAdminPin');
+      }
+      const pin = window.prompt('Enter Master PIN to delete a pending image');
+      if (!pin) return false;
+      const response = await fetch('/api/admin/master-check', { method:'POST', headers:{ 'X-Admin-Pin': pin } });
+      if (!response.ok) {
+        alert('That Master PIN was not accepted.');
+        return false;
+      }
+      sessionStorage.setItem('peopleSystemAdminPin', pin);
+      return true;
+    }
+
+    function fillDatalist(id, values) {
+      document.getElementById(id).innerHTML = [...new Set((values || []).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b))
+        .map(value => `<option value="${optionValue(value)}"></option>`)
+        .join('');
+    }
+
+    function normalizeLookupText(value) {
+      return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+    }
+
+    function filenameMatchText(fileName) {
+      return normalizeLookupText(String(fileName || '').replace(/\.[^.]+$/, '')
+        .replace(/\b(img|image|photo|pic|picture|headshot|profile|screenshot|copy|edited|edit|final|crop|cropped)\b/gi, ' ')
+        .replace(/\b(dsc|pxl|img)[-_ ]?\d+\b/gi, ' ')
+        .replace(/\b\d{6,}\b/g, ' '));
+    }
+
+    function scoreCandidateName(candidateName, filenameText) {
+      const candidate = normalizeLookupText(candidateName);
+      if (!candidate || !filenameText) return 0;
+      const filenameTokens = filenameText.split(' ').filter(token => token.length > 1);
+      const candidateTokens = candidate.split(' ').filter(token => token.length > 1);
+      if (!filenameTokens.length || !candidateTokens.length) return 0;
+      if (filenameText === candidate) return 120;
+      if (filenameText.includes(candidate) && candidate.length >= 5) return 104 + Math.min(candidate.length, 24);
+      if (candidate.includes(filenameText) && filenameText.length >= 5) return 78 + Math.min(filenameText.length, 20);
+      const matchedTokens = candidateTokens.filter(token => filenameTokens.includes(token));
+      if (matchedTokens.length === candidateTokens.length && candidateTokens.length >= 2) return 78 + candidateTokens.length * 8 + Math.min(candidate.length, 20);
+      if (matchedTokens.length >= 2) return 58 + matchedTokens.length * 9;
+      if (candidateTokens.length === 1 && matchedTokens.length === 1 && candidate.length >= 5) return 72;
+      return 0;
+    }
+
+    function bestPersonForFilename(fileName) {
+      const filenameText = filenameMatchText(fileName);
+      if (!filenameText || !overviewPeople.length) return null;
+      const matches = overviewPeople.map(person => {
+        const names = [person.name, ...(person.aliases || [])].filter(Boolean);
+        const score = names.reduce((best, name) => Math.max(best, scoreCandidateName(name, filenameText)), 0);
+        return { person, score };
+      }).filter(match => match.score >= 78).sort((a, b) => b.score - a.score);
+      if (!matches.length) return null;
+      if (matches[1] && matches[0].score - matches[1].score < 8) return null;
+      return matches[0].person;
+    }
+
+    function applyPerson(index, person) {
+      const item = queue[index];
+      if (!item || !person) return;
+      item.name = person.name || item.name;
+      item.role = person.roles?.[0] || item.role;
+      item.stable = person.stables?.[0] || item.stable;
+      item.aliases = (person.aliases || []).join(', ');
+      item.suggestionUsed = true;
+      renderQueue();
+    }
+
+    function fileFingerprint(file) {
+      return `${file.name}|${file.size}|${file.lastModified || 0}`;
+    }
+
+    function addFiles(files) {
+      const seen = new Set(queue.map(item => item.fileKey));
+      let skippedDuplicates = 0;
+      const newItems = [];
+      [...files].filter(file => file.type.startsWith('image/')).forEach(file => {
+        const fileKey = fileFingerprint(file);
+        if (seen.has(fileKey)) {
+          skippedDuplicates += 1;
+          return;
+        }
+        seen.add(fileKey);
+        const person = bestPersonForFilename(file.name);
+        newItems.push({
+          file,
+          fileKey,
+          pendingId: null,
+          previewUrl: URL.createObjectURL(file),
+          include: true,
+          saved: false,
+          status: 'Ready',
+          suggestedPerson: person,
+          suggestionUsed: Boolean(person),
+          name: person?.name || '',
+          role: person?.roles?.[0] || '',
+          stable: person?.stables?.[0] || '',
+          location_taken: '',
+          source_region: defaultRegion.value || suggestions.default_region || 'Northern',
+          pending_region: '',
+          aliases: person ? (person.aliases || []).join(', ') : '',
+          notes: '',
+        });
+      });
+      queue = queue.concat(newItems);
+      statusEl.textContent = `${queue.length} images in the queue. Review them before saving.${skippedDuplicates ? ` ${skippedDuplicates} duplicate file${skippedDuplicates === 1 ? '' : 's'} skipped.` : ''}`;
+      renderQueue();
+    }
+
+    function updateItemFromInput(input) {
+      const item = queue[Number(input.dataset.index)];
+      if (!item) return;
+      if (input.type === 'checkbox') item[input.dataset.field] = input.checked;
+      else item[input.dataset.field] = input.value;
+    }
+
+    function queueItemClass(item) {
+      return [
+        'item',
+        item.include && !item.saved ? 'included' : '',
+        item.saved ? 'saved' : '',
+      ].filter(Boolean).join(' ');
+    }
+
+    function includeToggleClass(item) {
+      return [
+        'include-toggle',
+        item.include && !item.saved ? '' : 'off',
+      ].filter(Boolean).join(' ');
+    }
+
+    function statusPillClass(item) {
+      const status = String(item.status || '');
+      if (item.saved) return 'pill ok';
+      if (/failed|needs|missing|error|http/i.test(status)) return 'pill error';
+      if (/duplicate|already|skipped/i.test(status)) return 'pill warn';
+      return 'pill';
+    }
+
+    function pendingRegionOptions(selectedRegion) {
+      const regions = suggestions.regions || ['Northern'];
+      return [
+        `<option value="" ${selectedRegion ? '' : 'selected'}>Pending: Unassigned</option>`,
+        ...regions.map(region => `<option value="${escapeHtml(region)}" ${region === selectedRegion ? 'selected' : ''}>Pending: ${escapeHtml(region)}</option>`),
+      ].join('');
+    }
+
+    function refreshSelectAllVisual() {
+      const label = selectAll.closest('.include-toggle');
+      if (label) label.classList.toggle('off', !selectAll.checked);
+    }
+
+    function renderQueue() {
+      if (!queue.length) {
+        queueEl.innerHTML = '<div class="empty">No images loaded yet.</div>';
+        return;
+      }
+      queueEl.innerHTML = queue.map((item, index) => `
+        <article class="${queueItemClass(item)}" data-index="${index}">
+          <img class="thumb" src="${item.previewUrl}" alt="${escapeHtml(item.file.name)}" data-enlarge-image data-image-title="${escapeHtml(item.file.name)}" title="Click to enlarge">
+          <div>
+            <div class="item-meta">
+              <label class="${includeToggleClass(item)}"><input type="checkbox" data-index="${index}" data-field="include" ${item.include ? 'checked' : ''} ${item.saved ? 'disabled' : ''}> <span>${item.include && !item.saved ? 'Included' : 'Include'}</span></label>
+              <span class="${statusPillClass(item)}">${escapeHtml(item.status)}</span>
+              <span class="pill">${escapeHtml(item.file.name)}${item.pendingId ? ' · pending #' + item.pendingId : ''}</span>
+              <select class="mini-select" data-index="${index}" data-field="pending_region" ${item.saved || item.pendingId ? 'disabled' : ''}>${pendingRegionOptions(item.pending_region || '')}</select>
+              ${item.suggestedPerson ? `<button class="suggestion" type="button" data-use-suggestion="${index}">Use ${escapeHtml(item.suggestedPerson.name)}</button>` : '<span class="pill warn">No filename match</span>'}
+            </div>
+            <div class="item-grid">
+              <input data-index="${index}" data-field="name" value="${escapeHtml(item.name)}" list="people-list" placeholder="Full name" ${item.saved ? 'disabled' : ''}>
+              <input data-index="${index}" data-field="role" value="${escapeHtml(item.role)}" list="roles-list" placeholder="Role" ${item.saved ? 'disabled' : ''}>
+              <input data-index="${index}" data-field="stable" value="${escapeHtml(item.stable)}" list="stables-list" placeholder="Stable" ${item.saved ? 'disabled' : ''}>
+              <input data-index="${index}" data-field="location_taken" value="${escapeHtml(item.location_taken)}" list="locations-list" placeholder="Location taken" ${item.saved ? 'disabled' : ''}>
+              <select data-index="${index}" data-field="source_region" ${item.saved ? 'disabled' : ''}>${(suggestions.regions || ['Northern']).map(region => `<option value="${escapeHtml(region)}" ${region === item.source_region ? 'selected' : ''}>${escapeHtml(region)}</option>`).join('')}</select>
+              <input data-index="${index}" data-field="aliases" value="${escapeHtml(item.aliases)}" list="aliases-list" placeholder="Aliases">
+              <textarea data-index="${index}" data-field="notes" rows="2" placeholder="Notes">${escapeHtml(item.notes)}</textarea>
+            </div>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    async function saveItem(item) {
+      const formData = new FormData();
+      formData.append('file', item.file);
+      formData.append('name', item.name.trim());
+      formData.append('role', item.role || '');
+      formData.append('stable', item.stable || '');
+      formData.append('location_taken', item.location_taken || '');
+      formData.append('notes', item.notes || '');
+      formData.append('aliases', item.aliases || '');
+      formData.append('aspect_ratio', '4:3');
+      formData.append('source_region', item.source_region || defaultRegion.value || '');
+      const url = item.pendingId ? `/api/ingest/pending/${item.pendingId}/process` : '/api/ingest/';
+      const response = await fetch(url, { method:'POST', headers:adminHeaders(), body:formData });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || `Upload failed with HTTP ${response.status}`);
+      }
+      return payload;
+    }
+
+    async function saveSelected() {
+      if (!await requireEditPin()) return;
+      const selected = queue.filter(item => item.include && !item.saved);
+      if (!selected.length) {
+        statusEl.textContent = 'No unsaved checked images to save.';
+        return;
+      }
+      saveSelectedBtn.disabled = true;
+      let saved = 0;
+      let duplicates = 0;
+      let failed = 0;
+      const messages = [];
+      for (const item of selected) {
+        if (!item.name.trim()) {
+          item.status = 'Needs a name';
+          failed += 1;
+          messages.push(`${item.file.name}: needs a name`);
+          renderQueue();
+          continue;
+        }
+        item.status = 'Saving...';
+        renderQueue();
+        try {
+          const payload = await saveItem(item);
+          item.saved = true;
+          item.include = false;
+          if (payload.status === 'duplicate') {
+            item.removeAfterProcess = true;
+            item.status = 'Already exists';
+            duplicates += 1;
+            messages.push(`${item.file.name}: already exists`);
+          } else {
+            item.status = 'Saved';
+            saved += 1;
+          }
+        } catch (error) {
+          item.status = error.message || 'Failed';
+          failed += 1;
+          messages.push(`${item.file.name}: ${item.status}`);
+        }
+        statusEl.textContent = `${saved} saved, ${duplicates} already existed, ${failed} need attention.`;
+        renderQueue();
+      }
+      queue = queue.filter(item => !item.removeAfterProcess);
+      saveSelectedBtn.disabled = false;
+      statusEl.textContent = `${saved} saved, ${duplicates} already existed and were removed, ${failed} need attention.${messages.length ? ` ${messages.slice(0, 3).join(' ')}` : ''}`;
+      renderQueue();
+      await loadPendingImages();
+    }
+
+    async function uploadSelectedPending() {
+      if (!await requireEditPin()) return;
+      const selected = queue.filter(item => item.include && !item.saved && !item.pendingId);
+      if (!selected.length) {
+        statusEl.textContent = 'No unsaved checked local images to upload to pending.';
+        return;
+      }
+      uploadPendingBtn.disabled = true;
+      let uploaded = 0;
+      let duplicates = 0;
+      let failed = 0;
+      const messages = [];
+      for (const item of selected) {
+        const formData = new FormData();
+        formData.append('file', item.file);
+        formData.append('intended_region', item.pending_region || '');
+        formData.append('notes', item.notes || '');
+        try {
+          const response = await fetch('/api/ingest/pending', { method:'POST', headers:adminHeaders(), body:formData });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(response.status === 404 ? 'Pending queue backend is not active yet. Restart the app services.' : 'Pending upload failed');
+          }
+          item.pendingId = payload.pending_image?.id || item.pendingId;
+          item.status = payload.status === 'duplicate' ? 'Already pending' : 'Pending';
+          item.include = false;
+          if (payload.status === 'duplicate') {
+            item.removeAfterProcess = true;
+            duplicates += 1;
+            messages.push(`${item.file.name}: already pending`);
+          } else {
+            uploaded += 1;
+          }
+        } catch (error) {
+          item.status = error.message || 'Pending failed';
+          failed += 1;
+          messages.push(`${item.file.name}: ${item.status}`);
+        }
+        renderQueue();
+      }
+      queue = queue.filter(item => !item.removeAfterProcess);
+      uploadPendingBtn.disabled = false;
+      statusEl.textContent = `${uploaded} uploaded to pending, ${duplicates} already pending and removed, ${failed} failed.${messages.length ? ` ${messages.slice(0, 3).join(' ')}` : ''}`;
+      renderQueue();
+      await loadPendingImages();
+    }
+
+    async function loadPendingIntoReview(item) {
+      const response = await fetch(item.file_url);
+      if (!response.ok) {
+        statusEl.textContent = 'Could not load pending image file.';
+        return;
+      }
+      const blob = await response.blob();
+      const file = new File([blob], item.original_filename || `pending-${item.id}.jpg`, { type: blob.type || 'image/jpeg', lastModified: Date.now() });
+      const person = bestPersonForFilename(file.name);
+      queue.unshift({
+        file,
+        fileKey: `pending-${item.id}`,
+        pendingId: item.id,
+        previewUrl: URL.createObjectURL(file),
+        include: true,
+        saved: false,
+        status: 'Loaded from pending',
+        suggestedPerson: person,
+        suggestionUsed: Boolean(person),
+        name: person?.name || '',
+        role: person?.roles?.[0] || '',
+        stable: person?.stables?.[0] || '',
+        location_taken: '',
+        source_region: item.intended_region || defaultRegion.value || suggestions.default_region || 'Northern',
+        pending_region: item.intended_region || '',
+        aliases: person ? (person.aliases || []).join(', ') : '',
+        notes: item.notes || '',
+      });
+      renderQueue();
+      statusEl.textContent = `${item.original_filename} loaded into review.`;
+    }
+
+    async function loadPendingImages() {
+      const response = await fetch(`/api/ingest/pending?scope=${encodeURIComponent(pendingFilter.value)}`);
+      if (!response.ok) {
+        const message = response.status === 404
+          ? 'Pending queue is not active yet. Restart the app services so the backend loads the new bulk-ingest routes.'
+          : `Could not load pending images. HTTP ${response.status}.`;
+        pendingList.innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
+        return;
+      }
+      const payload = await response.json();
+      const items = payload.pending_images || [];
+      if (!items.length) {
+        pendingList.innerHTML = '<div class="empty">No pending images match this filter.</div>';
+        return;
+      }
+      pendingList.innerHTML = items.map(item => `
+        <article class="item">
+          <img class="thumb" src="${escapeHtml(item.file_url)}" alt="${escapeHtml(item.original_filename)}" data-enlarge-image data-image-title="${escapeHtml(item.original_filename)}" title="Click to enlarge">
+          <div>
+            <div class="item-meta">
+              <span class="pill">${escapeHtml(item.status)}</span>
+              <span class="pill">${escapeHtml(item.original_filename)}</span>
+              <span class="pill">Uploaded by ${escapeHtml(item.uploading_region || item.uploading_instance_name || '-')}</span>
+              <label class="pending-region-control">
+                <span class="pill">For</span>
+                <select class="mini-select" data-pending-region-select="${item.id}">${pendingRegionOptions(item.intended_region || '')}</select>
+                <button type="button" data-update-pending-region="${item.id}">Save Region</button>
+              </label>
+            </div>
+            <p class="subtle">${escapeHtml(item.notes || '')}</p>
+            <div class="actions">
+              <button type="button" data-load-pending="${item.id}">Load Into Review</button>
+              <button type="button" data-skip-pending="${item.id}">Skip</button>
+              <button class="danger" type="button" data-delete-pending="${item.id}">Delete</button>
+            </div>
+          </div>
+        </article>
+      `).join('');
+      pendingList.querySelectorAll('[data-load-pending]').forEach(button => {
+        const item = items.find(row => String(row.id) === button.dataset.loadPending);
+        button.addEventListener('click', () => item && loadPendingIntoReview(item));
+      });
+      pendingList.querySelectorAll('[data-skip-pending]').forEach(button => {
+        button.addEventListener('click', async () => {
+          if (!await requireEditPin()) return;
+          const note = window.prompt('Optional skip note');
+          if (note === null) return;
+          const response = await fetch(`/api/ingest/pending/${button.dataset.skipPending}/skip`, { method:'POST', headers:adminHeaders({ 'Content-Type':'application/json' }), body:JSON.stringify({ notes:note }) });
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            alert(error.detail || 'Could not skip the pending image.');
+            return;
+          }
+          await loadPendingImages();
+        });
+      });
+      pendingList.querySelectorAll('[data-update-pending-region]').forEach(button => {
+        button.addEventListener('click', async () => {
+          if (!await requireEditPin()) return;
+          const select = pendingList.querySelector(`[data-pending-region-select="${button.dataset.updatePendingRegion}"]`);
+          const response = await fetch(`/api/ingest/pending/${button.dataset.updatePendingRegion}`, {
+            method:'PUT',
+            headers:adminHeaders({ 'Content-Type':'application/json' }),
+            body:JSON.stringify({ intended_region: select?.value || null }),
+          });
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            alert(error.detail || 'Could not update the pending image region.');
+            return;
+          }
+          await loadPendingImages();
+        });
+      });
+      pendingList.querySelectorAll('[data-delete-pending]').forEach(button => {
+        button.addEventListener('click', async () => {
+          if (!window.confirm('Delete this pending image from the shared queue?')) return;
+          if (!await requireMasterPin()) return;
+          await fetch(`/api/ingest/pending/${button.dataset.deletePending}`, { method:'DELETE', headers:adminHeaders() });
+          await loadPendingImages();
+        });
+      });
+    }
+
+    async function loadSuggestions() {
+      const [suggestionResponse, overviewResponse] = await Promise.all([
+        fetch('/api/suggestions'),
+        fetch('/api/people/overview?region_scope=all')
+      ]);
+      if (suggestionResponse.ok) suggestions = await suggestionResponse.json();
+      if (overviewResponse.ok) overviewPeople = (await overviewResponse.json()).all_people || [];
+      defaultRegion.innerHTML = (suggestions.regions || ['Northern']).map(region => `<option value="${optionValue(region)}">${escapeHtml(region)}</option>`).join('');
+      defaultRegion.value = suggestions.default_region || defaultRegion.value || 'Northern';
+      fillDatalist('people-list', suggestions.people);
+      fillDatalist('roles-list', suggestions.roles);
+      fillDatalist('stables-list', suggestions.stables);
+      fillDatalist('locations-list', suggestions.locations);
+      fillDatalist('aliases-list', suggestions.aliases);
+    }
+
+    fileInput.addEventListener('change', () => addFiles(fileInput.files || []));
+    dropZone.addEventListener('dragover', event => { event.preventDefault(); dropZone.classList.add('drag'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+    dropZone.addEventListener('drop', event => {
+      event.preventDefault();
+      dropZone.classList.remove('drag');
+      addFiles(event.dataTransfer.files || []);
+    });
+    queueEl.addEventListener('input', event => {
+      if (event.target.matches('[data-field]')) updateItemFromInput(event.target);
+    });
+    queueEl.addEventListener('change', event => {
+      if (event.target.matches('[data-field]')) {
+        updateItemFromInput(event.target);
+        if (event.target.type === 'checkbox') renderQueue();
+      }
+    });
+    queueEl.addEventListener('click', event => {
+      const image = event.target.closest('[data-enlarge-image]');
+      if (image) {
+        openImageLightbox(image.currentSrc || image.src, image.dataset.imageTitle || image.alt);
+        return;
+      }
+      const button = event.target.closest('[data-use-suggestion]');
+      if (!button) return;
+      applyPerson(Number(button.dataset.useSuggestion), queue[Number(button.dataset.useSuggestion)]?.suggestedPerson);
+    });
+    pendingList.addEventListener('click', event => {
+      const image = event.target.closest('[data-enlarge-image]');
+      if (image) openImageLightbox(image.currentSrc || image.src, image.dataset.imageTitle || image.alt);
+    });
+    imageLightboxClose.addEventListener('click', () => imageLightbox.close());
+    imageLightbox.addEventListener('click', event => {
+      if (event.target === imageLightbox) imageLightbox.close();
+    });
+    selectAll.addEventListener('change', () => {
+      queue.forEach(item => { if (!item.saved) item.include = selectAll.checked; });
+      refreshSelectAllVisual();
+      renderQueue();
+    });
+    clearSavedBtn.addEventListener('click', () => {
+      queue = queue.filter(item => !item.saved);
+      renderQueue();
+    });
+    saveSelectedBtn.addEventListener('click', saveSelected);
+    uploadPendingBtn.addEventListener('click', uploadSelectedPending);
+    refreshPendingBtn.addEventListener('click', loadPendingImages);
+    pendingFilter.addEventListener('change', loadPendingImages);
+    loadSuggestions().catch(error => {
+      console.warn(error);
+      statusEl.textContent = 'Suggestions could not be loaded. You can still add files and type names manually.';
+    }).finally(loadPendingImages);
+    refreshSelectAllVisual();
+  </script>
+</body>
+</html>

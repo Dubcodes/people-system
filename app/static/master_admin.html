@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/master_admin_gate.js?v=4"></script>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>Admin | Race Day People Intelligence</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#6b7280; --line:rgba(120,98,69,.18); --accent:#7b2c1f; --accent-dark:#551e15; --button:#f1e5d3; --button-active:#315f48; --button-active-dark:#214130; --button-secondary:#2f4858; --bg-a:#ecdfcf; --bg-b:#f6f1e7; --panel:rgba(255,250,242,.95); --shadow:0 16px 38px rgba(50,34,16,.12); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Georgia,"Times New Roman",serif; background:linear-gradient(135deg,var(--bg-a) 0%,var(--bg-b) 100%); color:var(--ink); min-height:100vh; overflow-x:hidden; }
+    .page { width:min(1320px,100%); margin:0 auto; padding:20px; display:grid; gap:16px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:18px; box-shadow:var(--shadow); display:grid; gap:14px; min-width:0; }
+    .topbar,.nav,.grid,.section-header,.button-row,.chips { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .topbar,.section-header { justify-content:space-between; }
+    .grid { align-items:stretch; }
+    .card { flex:1 1 280px; display:grid; gap:10px; padding:14px; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.55); }
+    .eyebrow { text-transform:uppercase; letter-spacing:.16em; font-size:11px; color:var(--accent); margin-bottom:4px; }
+    h1,h2,h3,p,pre { margin:0; }
+    h1 { font-size:26px; }
+    h2 { font-size:20px; }
+    h3 { font-size:17px; }
+    .subtle { color:var(--muted); }
+    button,.button-link,input,textarea,select { font:inherit; border-radius:12px; padding:10px 12px; border:1px solid var(--line); }
+    button,.button-link { background:var(--button); color:var(--ink); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:transform .08s ease, filter .08s ease, box-shadow .08s ease; }
+    button:active,.button-link:active { transform:translateY(1px) scale(.98); filter:brightness(.92); box-shadow:inset 0 2px 8px rgba(0,0,0,.16); }
+    button.primary,.button-link.primary { background:var(--accent); color:white; border-color:transparent; }
+    button.secondary,.button-link.secondary { background:var(--button-secondary); color:white; border-color:transparent; }
+    button.danger, .button-link.danger { background:#8f2f1d; color:white; border-color:transparent; }
+    button.active { background:var(--button-active); color:white; border-color:transparent; }
+    input,textarea,select { background:white; width:100%; }
+    .field { display:grid; gap:6px; min-width:220px; flex:1 1 220px; }
+    .field span { font-size:12px; color:var(--muted); letter-spacing:.03em; }
+    .pill { border:1px solid var(--line); border-radius:999px; padding:6px 10px; background:rgba(255,255,255,.72); font-size:13px; }
+    .list { display:grid; gap:10px; }
+    .row { border:1px solid var(--line); border-radius:16px; background:rgba(255,255,255,.56); padding:12px; display:grid; gap:8px; }
+    .alias-grid { display:grid; gap:8px; }
+    .alias-row { border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.58); padding:10px 12px; display:grid; gap:6px; }
+    .alias-edit-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }
+    .alias-meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .alias-panel { display:none; }
+    .alias-panel.open { display:grid; gap:10px; }
+    details { border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.66); }
+    summary { cursor:pointer; padding:10px 12px; }
+    .audit-meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .json-box { padding:10px 12px; white-space:pre-wrap; word-break:break-word; font-size:12px; color:#274; border-top:1px solid var(--line); background:rgba(255,255,255,.45); }
+    .status { min-height:20px; }
+    .editor-layout { display:grid; grid-template-columns:minmax(260px, 420px) minmax(320px, 1fr); gap:12px; }
+    .editor-list { display:grid; gap:8px; max-height:420px; overflow:auto; }
+    .editor-row { border:1px solid var(--line); border-radius:14px; padding:10px 12px; background:rgba(255,255,255,.58); display:grid; gap:6px; }
+    .editor-row.active { outline:3px solid rgba(49,95,72,.38); }
+    .editor-actions { display:flex; flex-wrap:wrap; gap:8px; }
+    textarea.code { min-height:260px; font-family:Consolas, "Courier New", monospace; font-size:13px; }
+    .untagged-grid { display:grid; gap:12px; }
+    .untagged-item { border:1px solid var(--line); border-radius:14px; padding:12px; background:rgba(255,255,255,.58); display:grid; gap:8px; }
+    .untagged-summary { font-size:13px; color:var(--muted); }
+    .empty-note { border:1px dashed var(--line); border-radius:14px; padding:12px; color:var(--muted); background:rgba(255,255,255,.4); }
+    .health-summary { display:flex; flex-wrap:wrap; gap:8px; }
+    .health-finding { border:1px solid var(--line); border-radius:12px; padding:10px; display:grid; gap:6px; background:rgba(255,255,255,.5); }
+    .health-finding.safe { border-color:rgba(49,95,72,.45); }
+    .health-finding.referenced { border-color:rgba(143,47,29,.45); }
+    .health-finding-header { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .health-finding input[type="checkbox"] { width:auto; }
+    .health-details { margin-top:8px; }
+    @media (max-width:980px) { .editor-layout { grid-template-columns:1fr; } }
+    @media (max-width:780px) { .page { padding:12px; } .topbar,.section-header { align-items:stretch; } button,.button-link { width:100%; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="panel">
+      <div class="topbar">
+        <div>
+          <div class="eyebrow">Admin</div>
+          <h1>Safety, Audit, And Recovery</h1>
+        </div>
+        <div class="nav">
+          <a class="button-link secondary" href="/">Viewer</a>
+          <a class="button-link" href="/settings">Settings</a>
+          <a class="button-link primary" href="/master-admin">Admin</a>
+          <a class="button-link" href="/help.html" aria-label="Help" title="Help">?</a>
+        </div>
+      </div>
+      <p class="subtle">This page is for recovery work, data fixes, and other actions that can change live records quickly. Everyday work should stay on the regular admin pages.</p>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">System</div>
+          <h2>Overview</h2>
+        </div>
+        <button id="refresh-overview" type="button">Refresh</button>
+      </div>
+      <div class="grid" id="overview-grid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Recovery</div>
+          <h2>Backups</h2>
+        </div>
+        <div class="button-row">
+          <button id="create-backup" class="primary" type="button">Create Backup</button>
+          <button id="refresh-backups" type="button">Refresh List</button>
+        </div>
+      </div>
+      <p class="subtle">Restoring a backup always creates a fresh safety backup first. Use restore carefully because it replaces the live database contents.</p>
+      <div class="status subtle" id="backup-status"></div>
+      <div class="list" id="backup-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Maintenance</div>
+          <h2>Images</h2>
+        </div>
+        <div class="button-row">
+          <button id="generate-thumbnails" type="button">Generate Missing Thumbnails</button>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <h3>Thumbnail Repair</h3>
+          <p class="subtle">Generate any missing thumbnails for existing images. This does not import outside data and it does not change person records.</p>
+        </article>
+      </div>
+      <div class="status subtle" id="maintenance-status"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Data Quality</div>
+          <h2>Untagged Records</h2>
+        </div>
+        <div class="button-row">
+          <button id="refresh-untagged" type="button">Refresh</button>
+        </div>
+      </div>
+      <p class="subtle">These rows are missing a valid region tag. Set the correct region here so filtering stays reliable across Northern, Central, Christchurch, and Dunedin.</p>
+      <div class="status subtle" id="untagged-status"></div>
+      <div class="untagged-grid" id="untagged-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Maintenance</div>
+          <h2>Database Health</h2>
+        </div>
+        <div class="button-row">
+          <button id="scan-database-health" class="primary" type="button">Scan Database</button>
+          <button id="remove-safe-orphan-junk" class="danger" type="button" disabled>Remove Safe Orphan Junk</button>
+        </div>
+      </div>
+      <p class="subtle">Scanning is read-only. Cleanup is Master-only, requires selected exact rows, creates a fresh logical backup first, then revalidates every row before deletion.</p>
+      <div class="status subtle" id="database-health-status">Run a scan to review grouped findings. Nothing runs automatically.</div>
+      <div class="health-summary" id="database-health-summary"></div>
+      <div class="list" id="database-health-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Data Editor</div>
+          <h2>Safe Table Editor</h2>
+        </div>
+      </div>
+      <p class="subtle">This is a plain high-admin editor for selected tables. Load a row, edit its JSON carefully, then save. Every change is audit logged.</p>
+      <div class="grid">
+        <label class="field">
+          <span>Table</span>
+          <select id="table-editor-table"></select>
+        </label>
+        <label class="field">
+          <span>Rows To Load</span>
+          <input id="table-editor-limit" type="number" min="1" max="200" value="50">
+        </label>
+      </div>
+      <div class="button-row">
+        <button id="load-table-editor" type="button">Load Rows</button>
+        <button id="save-table-editor" class="primary" type="button">Save Loaded Row</button>
+      </div>
+      <div class="status subtle" id="table-editor-status">Choose a table, load some rows, then click one to edit it.</div>
+      <div class="editor-layout">
+        <div class="editor-list" id="table-editor-list"></div>
+        <div class="card">
+          <h3>Row JSON</h3>
+          <p class="subtle" id="table-editor-meta">No row loaded yet.</p>
+          <textarea id="table-editor-json" class="code" spellcheck="false" placeholder='{"field":"value"}'></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Tracks</div>
+          <h2>Track Names And Aliases</h2>
+        </div>
+        <div class="button-row">
+          <button id="toggle-track-aliases" type="button">Show Track Alias List</button>
+          <button id="refresh-track-aliases" type="button">Refresh</button>
+          <button id="cleanup-track-aliases" class="danger" type="button">Run Track Cleanup</button>
+        </div>
+      </div>
+      <p class="subtle">Track aliases are used to match imported race-day track names back to one canonical track. Edit them carefully because these rows affect race matching.</p>
+      <div class="status subtle" id="track-alias-status">Track alias list hidden.</div>
+      <div class="alias-panel" id="track-alias-panel">
+        <article class="alias-row">
+          <h3>Add Track Alias</h3>
+          <div class="alias-edit-grid" id="new-track-alias-form">
+            <input data-field="alias" placeholder="Alias, e.g. Ellerslie">
+            <input data-field="canonical_track" placeholder="Canonical track, e.g. Ellerslie">
+            <input data-field="course_name" placeholder="Course name">
+            <input data-field="club_name" placeholder="Club name">
+            <input data-field="location_name" placeholder="Location, e.g. Auckland">
+          </div>
+          <div class="button-row">
+            <button type="button" id="create-track-alias" class="primary">Add Track Alias</button>
+          </div>
+        </article>
+        <div class="subtle">Showing the current track alias rows. Each row can be edited directly here.</div>
+        <div class="alias-grid" id="track-alias-list"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Passwords</div>
+          <h2>Regional PINs</h2>
+        </div>
+      </div>
+      <p class="subtle">These PINs apply to this app region. Leave a field blank to keep the current value. Clearing a regional PIN resets it back to the environment/default fallback.</p>
+      <div class="grid">
+        <label class="field">
+          <span>New Edit / Editor PIN For This Region</span>
+          <input id="admin-pin-input" type="password" inputmode="numeric" placeholder="Leave blank to keep current">
+        </label>
+        <label class="field">
+          <span>New Master PIN For This Region</span>
+          <input id="master-pin-input" type="password" inputmode="numeric" placeholder="Leave blank to keep current">
+        </label>
+      </div>
+      <div class="button-row">
+        <button id="save-pins" class="primary" type="button">Save Regional PINs</button>
+        <button id="clear-admin-pin" type="button">Reset Regional Edit / Editor PIN</button>
+        <button id="clear-master-pin" class="danger" type="button">Reset Regional Master PIN</button>
+        <button id="clear-legacy-pins" type="button">Clear Legacy Global PIN Overrides</button>
+      </div>
+      <p class="subtle">If both regional PINs are forgotten, use the environment/default Master PIN to open this page, then reset the regional values. Current default fallbacks are controlled by <code>EDIT_PIN</code>, <code>ADMIN_PIN</code>, and <code>MASTER_ADMIN_PIN</code> in the app environment.</p>
+      <div class="status subtle" id="pin-status"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Audit</div>
+          <h2>Recent Changes</h2>
+        </div>
+        <button id="refresh-audit" type="button">Refresh Audit</button>
+      </div>
+      <div class="status subtle" id="audit-status"></div>
+      <div class="list" id="audit-list"></div>
+    </section>
+  </main>
+
+  <script>
+    const overviewGrid = document.getElementById('overview-grid');
+    const backupList = document.getElementById('backup-list');
+    const backupStatus = document.getElementById('backup-status');
+    const pinStatus = document.getElementById('pin-status');
+    const auditStatus = document.getElementById('audit-status');
+    const auditList = document.getElementById('audit-list');
+    const adminPinInput = document.getElementById('admin-pin-input');
+    const masterPinInput = document.getElementById('master-pin-input');
+    const maintenanceStatus = document.getElementById('maintenance-status');
+    const trackAliasStatus = document.getElementById('track-alias-status');
+    const trackAliasPanel = document.getElementById('track-alias-panel');
+    const trackAliasList = document.getElementById('track-alias-list');
+     const toggleTrackAliasesButton = document.getElementById('toggle-track-aliases');
+     const untaggedStatus = document.getElementById('untagged-status');
+     const untaggedList = document.getElementById('untagged-list');
+     const tableEditorTable = document.getElementById('table-editor-table');
+     const tableEditorLimit = document.getElementById('table-editor-limit');
+     const tableEditorList = document.getElementById('table-editor-list');
+     const tableEditorJson = document.getElementById('table-editor-json');
+     const tableEditorStatus = document.getElementById('table-editor-status');
+      const tableEditorMeta = document.getElementById('table-editor-meta');
+      const databaseHealthStatus = document.getElementById('database-health-status');
+      const databaseHealthSummary = document.getElementById('database-health-summary');
+      const databaseHealthList = document.getElementById('database-health-list');
+      const scanDatabaseHealthButton = document.getElementById('scan-database-health');
+      const removeSafeOrphanJunkButton = document.getElementById('remove-safe-orphan-junk');
+     let tableEditorConfig = [];
+     let tableEditorCurrentTable = '';
+     let tableEditorCurrentRowId = null;
+
+    function adminHeaders(extra = {}) {
+      return { 'X-Admin-Pin': sessionStorage.getItem('peopleSystemAdminPin') || '', ...extra };
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    }
+
+    function prettyJson(value) {
+      if (!value) return '';
+      try { return JSON.stringify(JSON.parse(value), null, 2); }
+      catch { return String(value); }
+    }
+
+    async function loadOverview() {
+      const [overviewResponse, passwordResponse] = await Promise.all([
+        fetch('/api/admin/master/overview', { headers: adminHeaders() }),
+        fetch('/api/admin/master/password-status', { headers: adminHeaders() }),
+      ]);
+      if (!overviewResponse.ok || !passwordResponse.ok) return;
+      const overview = await overviewResponse.json();
+      const passwordStatus = await passwordResponse.json();
+      const instanceChips = (overview.recent_instances || []).map(item => `<span class="pill">${escapeHtml(item.instance_name || item.instance_id || 'unknown')} · ${escapeHtml(item.last_action || 'activity')}</span>`).join('');
+      overviewGrid.innerHTML = `
+        <article class="card">
+          <h3>This Instance</h3>
+          <div class="chips">
+            <span class="pill">ID: ${escapeHtml(overview.instance_id)}</span>
+            <span class="pill">Name: ${escapeHtml(overview.instance_name)}</span>
+            <span class="pill">Region: ${escapeHtml(passwordStatus.current_region || 'Unknown')}</span>
+          </div>
+          <p class="subtle">This is the running app instance name and ID that will be written into audit events.</p>
+        </article>
+        <article class="card">
+          <h3>PIN Source</h3>
+          <div class="chips">
+            <span class="pill">${escapeHtml(passwordStatus.current_region || 'This region')} Edit: ${passwordStatus.edit_pin_overridden ? 'regional DB value active' : 'environment/default fallback'}</span>
+            <span class="pill">${escapeHtml(passwordStatus.current_region || 'This region')} Master: ${passwordStatus.master_admin_pin_overridden ? 'regional DB value active' : 'environment/default fallback'}</span>
+            <span class="pill">Legacy global Edit: ${passwordStatus.legacy_global_edit_pin_overridden ? 'active fallback' : 'clear'}</span>
+            <span class="pill">Legacy global Master: ${passwordStatus.legacy_global_master_admin_pin_overridden ? 'active fallback' : 'clear'}</span>
+          </div>
+          <p class="subtle">${escapeHtml(passwordStatus.fallback_note || 'Environment/default PINs remain available as recovery fallbacks.')}</p>
+        </article>
+        <article class="card">
+          <h3>Recent Instance Activity</h3>
+          <div class="chips">${instanceChips || '<span class="pill">No recent audit activity</span>'}</div>
+          <p class="subtle">This is pulled from audit history. It is useful for recent activity, but it is not a live connection list.</p>
+        </article>
+        <article class="card">
+          <h3>Storage</h3>
+          <div class="chips">
+            <span class="pill">Backups: ${escapeHtml(String(overview.backup_count || 0))}</span>
+            <span class="pill">Audit events: ${escapeHtml(String(overview.audit_event_count || 0))}</span>
+          </div>
+          <p class="subtle">Backup folder: ${escapeHtml(overview.backup_directory || 'unknown')}</p>
+        </article>
+      `;
+    }
+
+    async function loadBackups() {
+      const response = await fetch('/api/admin/master/backups', { headers: adminHeaders() });
+      if (!response.ok) return;
+      const data = await response.json();
+      const backups = data.backups || [];
+      if (data.backup_directory) {
+        backupStatus.textContent = `Backup folder: ${data.backup_directory}`;
+      }
+      backupList.innerHTML = backups.length ? backups.map(item => `
+        <article class="row">
+          <div class="audit-meta">
+            <strong>${escapeHtml(item.filename)}</strong>
+            <span class="pill">${escapeHtml(item.modified_at)}</span>
+            <span class="pill">${escapeHtml(String(item.size_bytes))} bytes</span>
+          </div>
+          <div class="button-row">
+            <button type="button" data-restore="${escapeHtml(item.filename)}" class="danger">Restore This Backup</button>
+            <button type="button" data-delete-backup="${escapeHtml(item.filename)}">Delete Backup</button>
+          </div>
+        </article>
+      `).join('') : '<div class="row"><p class="subtle">No backups are saved in the current backup folder yet.</p></div>';
+
+      backupList.querySelectorAll('[data-restore]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const filename = button.dataset.restore;
+          if (!window.confirm(`Restore ${filename}?\n\nThis will replace the live database, and a safety backup will be created first.`)) return;
+          backupStatus.textContent = `Restoring ${filename}...`;
+          const response = await fetch('/api/admin/master/backups/restore', {
+            method: 'POST',
+            headers: adminHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ filename }),
+          });
+          const result = await response.json().catch(() => ({}));
+          backupStatus.textContent = response.ok
+            ? `Restore complete. Safety backup: ${result.safety_backup}`
+            : (result.detail || 'Restore failed.');
+          if (response.ok) {
+            await loadOverview();
+            await loadBackups();
+            await loadAudit();
+          }
+        });
+      });
+
+      backupList.querySelectorAll('[data-delete-backup]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const filename = button.dataset.deleteBackup;
+          const pin = window.prompt(`Delete backup ${filename}?\n\nEnter Master PIN to confirm:`);
+          if (!pin) return;
+          backupStatus.textContent = `Deleting ${filename}...`;
+          const response = await fetch(`/api/admin/master/backups?filename=${encodeURIComponent(filename)}`, {
+            method: 'DELETE',
+            headers: { ...adminHeaders(), 'X-Admin-Pin': pin },
+          });
+          const result = await response.json().catch(() => ({}));
+          backupStatus.textContent = response.ok ? `Deleted backup ${filename}.` : (result.detail || 'Backup delete failed.');
+          if (response.ok) {
+            sessionStorage.setItem('peopleSystemAdminPin', pin);
+            await loadBackups();
+            await loadAudit();
+          }
+        });
+      });
+    }
+
+    async function loadTrackAliases() {
+      trackAliasStatus.textContent = 'Loading track aliases...';
+      const params = new URLSearchParams({ limit: '400' });
+      const response = await fetch(`/api/admin/master/track-aliases?${params.toString()}`, { headers: adminHeaders() });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        trackAliasStatus.textContent = data.detail || 'Track alias list failed to load.';
+        trackAliasList.innerHTML = '';
+        return;
+      }
+      const aliases = data.aliases || [];
+      trackAliasStatus.textContent = `${aliases.length} track alias rows loaded.`;
+      trackAliasList.innerHTML = aliases.length ? aliases.map(item => `
+        <article class="alias-row" data-track-alias-id="${escapeHtml(item.id)}">
+          <div class="alias-meta">
+            <strong>${escapeHtml(item.alias)}</strong>
+            <span class="pill">${escapeHtml(item.canonical_track || '')}</span>
+          </div>
+          <div class="alias-edit-grid">
+            <input data-field="alias" value="${escapeHtml(item.alias || '')}" placeholder="Alias">
+            <input data-field="canonical_track" value="${escapeHtml(item.canonical_track || '')}" placeholder="Canonical track">
+            <input data-field="course_name" value="${escapeHtml(item.course_name || '')}" placeholder="Course name">
+            <input data-field="club_name" value="${escapeHtml(item.club_name || '')}" placeholder="Club name">
+            <input data-field="location_name" value="${escapeHtml(item.location_name || '')}" placeholder="Location">
+          </div>
+          <div class="button-row">
+            <button type="button" data-save-track-alias="${escapeHtml(item.id)}" class="primary">Save</button>
+            <button type="button" data-delete-track-alias="${escapeHtml(item.id)}" class="danger">Delete</button>
+          </div>
+        </article>
+      `).join('') : '<div class="row"><p class="subtle">No track alias rows matched this search.</p></div>';
+
+      trackAliasList.querySelectorAll('[data-save-track-alias]').forEach(button => {
+        button.addEventListener('click', () => saveTrackAlias(button.dataset.saveTrackAlias));
+      });
+      trackAliasList.querySelectorAll('[data-delete-track-alias]').forEach(button => {
+        button.addEventListener('click', () => deleteTrackAlias(button.dataset.deleteTrackAlias));
+      });
+    }
+
+    function trackAliasPayloadFrom(container) {
+      const payload = {};
+      container.querySelectorAll('[data-field]').forEach(input => {
+        payload[input.dataset.field] = input.value;
+      });
+      return payload;
+    }
+
+    async function createTrackAlias() {
+      const form = document.getElementById('new-track-alias-form');
+      trackAliasStatus.textContent = 'Adding track alias...';
+      const response = await fetch('/api/admin/master/track-aliases', {
+        method: 'POST',
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(trackAliasPayloadFrom(form)),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        trackAliasStatus.textContent = result.detail || 'Track alias add failed.';
+        return;
+      }
+      form.querySelectorAll('[data-field]').forEach(input => {
+        input.value = '';
+      });
+      trackAliasStatus.textContent = `Added track alias ${result.alias}.`;
+      await loadTrackAliases();
+      await loadAudit();
+    }
+
+    async function saveTrackAlias(id) {
+      const row = trackAliasList.querySelector(`[data-track-alias-id="${CSS.escape(String(id))}"]`);
+      if (!row) return;
+      trackAliasStatus.textContent = 'Saving track alias...';
+      const response = await fetch(`/api/admin/master/track-aliases/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(trackAliasPayloadFrom(row)),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        trackAliasStatus.textContent = result.detail || 'Track alias save failed.';
+        return;
+      }
+      trackAliasStatus.textContent = `Saved track alias ${result.alias}.`;
+      await loadTrackAliases();
+      await loadAudit();
+    }
+
+    async function deleteTrackAlias(id) {
+      const row = trackAliasList.querySelector(`[data-track-alias-id="${CSS.escape(String(id))}"]`);
+      const alias = row?.querySelector('[data-field="alias"]')?.value || `#${id}`;
+      if (!window.confirm(`Delete track alias ${alias}?`)) return;
+      trackAliasStatus.textContent = 'Deleting track alias...';
+      const response = await fetch(`/api/admin/master/track-aliases/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: adminHeaders(),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        trackAliasStatus.textContent = result.detail || 'Track alias delete failed.';
+        return;
+      }
+      trackAliasStatus.textContent = `Deleted track alias ${alias}.`;
+      await loadTrackAliases();
+      await loadAudit();
+    }
+
+    async function cleanupTrackAliases() {
+      if (!window.confirm('Run the full track cleanup now?\n\nThis will remove obvious junk, remove address duplicates, remove URL/email/contact junk, and normalize kept rows to approved location names.')) return;
+      trackAliasStatus.textContent = 'Running full track cleanup...';
+      const response = await fetch('/api/admin/master/track-aliases/cleanup', { method: 'POST', headers: adminHeaders() });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        trackAliasStatus.textContent = result.detail || 'Track alias cleanup failed.';
+        return;
+      }
+      trackAliasStatus.textContent = `Cleanup complete. Removed ${result.deleted_total || 0} rows and normalized ${result.normalized_locations || 0} locations.`;
+      await loadTrackAliases();
+      await loadAudit();
+    }
+
+    function renderUntaggedSections(data) {
+      const sections = data.sections || [];
+      const total = data.total_rows || 0;
+      untaggedStatus.textContent = total
+        ? `${total} untagged rows are ready for review.`
+        : 'No untagged rows were found in the checked tables.';
+      untaggedList.innerHTML = sections.map(section => {
+        const options = (data.allowed_regions || []).map(region => `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`).join('');
+        const rows = (section.rows || []).map(row => `
+          <article class="untagged-item">
+            <div class="audit-meta">
+              <strong>${escapeHtml(row.label || `${section.table} ${row.id}`)}</strong>
+              <span class="pill">${escapeHtml(section.table)}</span>
+              <span class="pill">ID ${escapeHtml(String(row.id))}</span>
+              <span class="pill">Current tag: ${escapeHtml(row.source_region || 'none')}</span>
+            </div>
+            <div class="untagged-summary">${escapeHtml(JSON.stringify(row.summary || {}))}</div>
+            <div class="editor-actions">
+              <select data-untagged-region="${escapeHtml(section.table)}:${escapeHtml(String(row.id))}">
+                ${options}
+              </select>
+              <button type="button" data-save-untagged="${escapeHtml(section.table)}:${escapeHtml(String(row.id))}" class="primary">Set Region</button>
+            </div>
+          </article>
+        `).join('');
+        return `
+          <article class="card">
+            <h3>${escapeHtml(section.table)}</h3>
+            <p class="subtle">${escapeHtml(String(section.count || 0))} rows shown.</p>
+            ${rows || '<div class="empty-note">No untagged rows in this table.</div>'}
+          </article>
+        `;
+      }).join('') || '<div class="empty-note">No untagged rows were found.</div>';
+
+      untaggedList.querySelectorAll('[data-save-untagged]').forEach(button => {
+        button.addEventListener('click', async () => {
+          const [table, id] = button.dataset.saveUntagged.split(':');
+          const select = untaggedList.querySelector(`[data-untagged-region="${CSS.escape(`${table}:${id}`)}"]`);
+          const sourceRegion = select?.value || '';
+          untaggedStatus.textContent = `Saving ${table} row ${id}...`;
+          const response = await fetch(`/api/admin/master/untagged/${encodeURIComponent(table)}/${encodeURIComponent(id)}/region`, {
+            method: 'PUT',
+            headers: adminHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ source_region: sourceRegion }),
+          });
+          const result = await response.json().catch(() => ({}));
+          untaggedStatus.textContent = response.ok
+            ? `Saved region ${result.source_region} on ${table} row ${id}.`
+            : (result.detail || 'Region update failed.');
+          if (response.ok) {
+            await loadUntagged();
+            await loadAudit();
+          }
+        });
+      });
+    }
+
+    async function loadUntagged() {
+      untaggedStatus.textContent = 'Loading untagged rows...';
+      const response = await fetch('/api/admin/master/untagged?limit=80', { headers: adminHeaders() });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        untaggedStatus.textContent = data.detail || 'Untagged rows failed to load.';
+        untaggedList.innerHTML = '';
+        return;
+      }
+      renderUntaggedSections(data);
+    }
+
+    function healthReferenceText(referenceCounts) {
+      const entries = Object.entries(referenceCounts || {}).filter(([key]) => key !== 'total');
+      return entries.length ? entries.map(([key, value]) => `${key.replaceAll('_', ' ')}: ${value}`).join(', ') : 'no references';
+    }
+
+    function selectedSafeHorseIds() {
+      return [...databaseHealthList.querySelectorAll('[data-safe-horse-id]:checked')]
+        .map(input => Number(input.dataset.safeHorseId))
+        .filter(Number.isInteger);
+    }
+
+    function updateSafeCleanupButton() {
+      removeSafeOrphanJunkButton.disabled = selectedSafeHorseIds().length === 0;
+    }
+
+    function healthFindingClass(finding) {
+      if (finding.safe_to_delete) return 'safe';
+      if (finding.safety_class === 'REFERENCED — DO NOT DELETE') return 'referenced';
+      return '';
+    }
+
+    function renderDatabaseHealth(report) {
+      const summary = report.summary || {};
+      databaseHealthSummary.innerHTML = [
+        ['Safe cleanup', summary.safe_cleanup || 0],
+        ['Needs review', summary.needs_review || 0],
+        ['Referenced issues', summary.referenced_issues || 0],
+        ['Region warnings', summary.region_warnings || 0],
+        ['Other warnings', summary.other_warnings || 0],
+      ].map(([label, count]) => `<span class="pill"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(String(count))}</span>`).join('');
+
+      databaseHealthList.innerHTML = (report.categories || []).map(category => {
+        const findings = category.findings || [];
+        const rows = findings.map(finding => {
+          const safeCheckbox = finding.safe_to_delete
+            ? `<input type="checkbox" data-safe-horse-id="${escapeHtml(String(finding.row_id))}" checked aria-label="Select ${escapeHtml(finding.display_value)} for safe cleanup">`
+            : '';
+          const evidence = Object.keys(finding.evidence || {}).length
+            ? `<div class="json-box">${escapeHtml(prettyJson(JSON.stringify(finding.evidence)))}</div>`
+            : '';
+          return `
+            <article class="health-finding ${healthFindingClass(finding)}">
+              <div class="health-finding-header">
+                ${safeCheckbox}
+                <strong>${escapeHtml(finding.display_value || `${finding.table} ${finding.row_id || ''}`)}</strong>
+                <span class="pill">${escapeHtml(finding.safety_class || finding.severity || 'REVIEW')}</span>
+                <span class="pill">${escapeHtml(finding.table || '')}</span>
+                ${finding.row_id !== null && finding.row_id !== undefined ? `<span class="pill">ID ${escapeHtml(String(finding.row_id))}</span>` : ''}
+              </div>
+              <div>${escapeHtml(finding.reason || '')}</div>
+              <div class="subtle">References: ${escapeHtml(healthReferenceText(finding.reference_counts))}</div>
+              <div class="subtle">Suggested action: ${escapeHtml(finding.suggested_action || '')}</div>
+              ${evidence}
+            </article>
+          `;
+        }).join('') || '<div class="empty-note">No findings in this category.</div>';
+        return `
+          <details class="health-details" ${category.key === 'safe_orphan_horse_junk' && findings.length ? 'open' : ''}>
+            <summary><strong>${escapeHtml(category.label)}</strong> <span class="pill">${escapeHtml(String(category.count || 0))}</span></summary>
+            <div class="list" style="padding:0 10px 10px">${rows}</div>
+          </details>
+        `;
+      }).join('');
+      databaseHealthList.querySelectorAll('[data-safe-horse-id]').forEach(input => input.addEventListener('change', updateSafeCleanupButton));
+      updateSafeCleanupButton();
+    }
+
+    async function scanDatabaseHealth() {
+      databaseHealthStatus.textContent = 'Scanning database (read-only)...';
+      scanDatabaseHealthButton.disabled = true;
+      removeSafeOrphanJunkButton.disabled = true;
+      const response = await fetch('/api/admin/master/database-health', { headers: adminHeaders() });
+      const report = await response.json().catch(() => ({}));
+      scanDatabaseHealthButton.disabled = false;
+      if (!response.ok) {
+        databaseHealthStatus.textContent = report.detail || 'Database Health scan failed.';
+        return;
+      }
+      renderDatabaseHealth(report);
+      databaseHealthStatus.textContent = 'Read-only scan complete. Review exact rows before any cleanup.';
+    }
+
+    async function removeSafeOrphanJunk() {
+      const horseIds = selectedSafeHorseIds();
+      if (!horseIds.length) {
+        databaseHealthStatus.textContent = 'Select at least one safe orphan horse row first.';
+        return;
+      }
+      if (!window.confirm(`Remove exactly ${horseIds.length} selected safe orphan horse row(s)?\n\nA fresh logical backup will be created first. Every row will be revalidated immediately before deletion.`)) return;
+      databaseHealthStatus.textContent = 'Creating safety backup and revalidating selected rows...';
+      removeSafeOrphanJunkButton.disabled = true;
+      const response = await fetch('/api/admin/master/database-health/remove-safe-orphan-junk', {
+        method: 'POST',
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ horse_ids: horseIds, confirm: true }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        databaseHealthStatus.textContent = result.detail || 'Safe orphan cleanup failed.';
+        updateSafeCleanupButton();
+        return;
+      }
+      databaseHealthStatus.textContent = `Cleanup complete. Deleted ${(result.deleted || []).length}; skipped ${(result.skipped_horse_ids || []).length}. Safety backup: ${result.backup?.filename || 'created'}.`;
+      await loadAudit();
+      await scanDatabaseHealth();
+    }
+
+    function renderTableEditorRows(data) {
+      tableEditorCurrentTable = data.table;
+      tableEditorCurrentRowId = null;
+      tableEditorMeta.textContent = 'No row loaded yet.';
+      tableEditorJson.value = '';
+      tableEditorList.innerHTML = (data.rows || []).map(row => `
+        <button type="button" class="editor-row" data-editor-row-id="${escapeHtml(String(row.id))}">
+          ${Object.entries(row).map(([key, value]) => `<div><strong>${escapeHtml(key)}:</strong> ${escapeHtml(String(value ?? ''))}</div>`).join('')}
+        </button>
+      `).join('') || '<div class="empty-note">No rows loaded for this table.</div>';
+
+      tableEditorList.querySelectorAll('[data-editor-row-id]').forEach(button => {
+        button.addEventListener('click', async () => {
+          tableEditorList.querySelectorAll('.editor-row').forEach(row => row.classList.remove('active'));
+          button.classList.add('active');
+          await loadTableEditorRow(button.dataset.editorRowId);
+        });
+      });
+    }
+
+    async function loadTableEditorConfig() {
+      const response = await fetch('/api/admin/master/table-editor/config', { headers: adminHeaders() });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        tableEditorStatus.textContent = data.detail || 'Table editor configuration failed to load.';
+        return;
+      }
+      tableEditorConfig = data.tables || [];
+      tableEditorTable.innerHTML = tableEditorConfig.map(item => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.name)}</option>`).join('');
+      if (!tableEditorTable.value && tableEditorConfig.length) {
+        tableEditorTable.value = tableEditorConfig[0].name;
+      }
+      if (tableEditorTable.value) {
+        await loadTableEditorRows();
+      }
+    }
+
+    async function loadTableEditorRows() {
+      const table = tableEditorTable.value;
+      const limit = Math.max(1, Math.min(200, Number(tableEditorLimit.value) || 50));
+      tableEditorStatus.textContent = `Loading ${table} rows...`;
+      const response = await fetch(`/api/admin/master/table-editor?table=${encodeURIComponent(table)}&limit=${encodeURIComponent(limit)}`, { headers: adminHeaders() });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        tableEditorStatus.textContent = data.detail || 'Table rows failed to load.';
+        return;
+      }
+      renderTableEditorRows(data);
+      tableEditorStatus.textContent = `Loaded ${data.rows?.length || 0} ${table} rows.`;
+    }
+
+    async function loadTableEditorRow(rowId) {
+      const table = tableEditorCurrentTable || tableEditorTable.value;
+      tableEditorStatus.textContent = `Loading ${table} row ${rowId}...`;
+      const response = await fetch(`/api/admin/master/table-editor/${encodeURIComponent(table)}/${encodeURIComponent(rowId)}`, { headers: adminHeaders() });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        tableEditorStatus.textContent = data.detail || 'Row load failed.';
+        return;
+      }
+      tableEditorCurrentRowId = rowId;
+      tableEditorMeta.textContent = `${table} row ${rowId}. Editable fields: ${(data.editable_fields || []).join(', ')}`;
+      const editable = {};
+      (data.editable_fields || []).forEach(field => {
+        editable[field] = data.row?.[field] ?? null;
+      });
+      tableEditorJson.value = JSON.stringify(editable, null, 2);
+      tableEditorStatus.textContent = `Loaded ${table} row ${rowId}.`;
+    }
+
+    async function saveTableEditorRow() {
+      if (!tableEditorCurrentTable || !tableEditorCurrentRowId) {
+        tableEditorStatus.textContent = 'Load a row first.';
+        return;
+      }
+      let payload;
+      try {
+        payload = JSON.parse(tableEditorJson.value || '{}');
+      } catch {
+        tableEditorStatus.textContent = 'Row JSON is not valid JSON.';
+        return;
+      }
+      if (!window.confirm(`Save ${tableEditorCurrentTable} row ${tableEditorCurrentRowId}?`)) return;
+      tableEditorStatus.textContent = `Saving ${tableEditorCurrentTable} row ${tableEditorCurrentRowId}...`;
+      const response = await fetch(`/api/admin/master/table-editor/${encodeURIComponent(tableEditorCurrentTable)}/${encodeURIComponent(tableEditorCurrentRowId)}`, {
+        method: 'PUT',
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => ({}));
+      tableEditorStatus.textContent = response.ok
+        ? `Saved ${tableEditorCurrentTable} row ${tableEditorCurrentRowId}.`
+        : (data.detail || 'Row save failed.');
+      if (response.ok) {
+        await loadTableEditorRows();
+        await loadTableEditorRow(tableEditorCurrentRowId);
+        await loadAudit();
+      }
+    }
+
+    async function loadAudit() {
+      const response = await fetch('/api/admin/master/audit-events?limit=120', { headers: adminHeaders() });
+      if (!response.ok) return;
+      const data = await response.json();
+      const events = data.events || [];
+      auditList.innerHTML = events.length ? events.map(event => `
+        <details>
+          <summary>
+            <div class="audit-meta">
+              <strong>${escapeHtml(event.action)} ${escapeHtml(event.entity_type)}</strong>
+              <span class="pill">${escapeHtml(event.created_at)}</span>
+              <span class="pill">${escapeHtml(event.instance_name || event.instance_id || 'unknown instance')}</span>
+              ${event.entity_id !== null && event.entity_id !== undefined ? `<span class="pill">ID ${escapeHtml(String(event.entity_id))}</span>` : ''}
+            </div>
+          </summary>
+          ${event.notes ? `<div class="json-box"><strong>Notes</strong>\n${escapeHtml(event.notes)}</div>` : ''}
+          ${event.before_json ? `<div class="json-box"><strong>Before</strong>\n${escapeHtml(prettyJson(event.before_json))}</div>` : ''}
+          ${event.after_json ? `<div class="json-box"><strong>After</strong>\n${escapeHtml(prettyJson(event.after_json))}</div>` : ''}
+        </details>
+      `).join('') : '<div class="row"><p class="subtle">No audit events recorded yet.</p></div>';
+      auditStatus.textContent = `${events.length} recent audit events loaded.`;
+    }
+
+    async function createBackup() {
+      backupStatus.textContent = 'Creating backup...';
+      const response = await fetch('/api/admin/master/backups/create', { method: 'POST', headers: adminHeaders() });
+      const result = await response.json().catch(() => ({}));
+      backupStatus.textContent = response.ok ? `Backup created: ${result.filename}` : (result.detail || 'Backup failed.');
+      if (response.ok) {
+        await loadBackups();
+        await loadAudit();
+      }
+    }
+
+    async function generateThumbnails() {
+      if (!window.confirm('Generate missing thumbnails now?')) return;
+      maintenanceStatus.textContent = 'Generating thumbnails...';
+      const response = await fetch('/api/admin/master/thumbnails/generate', { method: 'POST', headers: adminHeaders() });
+      const result = await response.json().catch(() => ({}));
+      maintenanceStatus.textContent = response.ok
+        ? `Thumbnails ready. Created ${result.created}, skipped ${result.skipped}, failed ${result.failed}.`
+        : (result.detail || 'Thumbnail generation failed.');
+      if (response.ok) await loadAudit();
+    }
+
+    async function savePins(payload) {
+      const response = await fetch('/api/admin/master/passwords', {
+        method: 'PUT',
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => ({}));
+      pinStatus.textContent = response.ok ? 'Regional PIN settings updated.' : (result.detail || 'PIN update failed.');
+      if (response.ok) {
+        adminPinInput.value = '';
+        masterPinInput.value = '';
+        await loadOverview();
+        await loadAudit();
+      }
+    }
+
+    document.getElementById('refresh-overview').addEventListener('click', loadOverview);
+    document.getElementById('refresh-backups').addEventListener('click', loadBackups);
+    document.getElementById('refresh-audit').addEventListener('click', loadAudit);
+    document.getElementById('refresh-untagged').addEventListener('click', loadUntagged);
+    scanDatabaseHealthButton.addEventListener('click', scanDatabaseHealth);
+    removeSafeOrphanJunkButton.addEventListener('click', removeSafeOrphanJunk);
+    document.getElementById('refresh-track-aliases').addEventListener('click', async () => {
+      if (!trackAliasPanel.classList.contains('open')) {
+        trackAliasPanel.classList.add('open');
+        toggleTrackAliasesButton.textContent = 'Hide Track Alias List';
+      }
+      await loadTrackAliases();
+    });
+    document.getElementById('cleanup-track-aliases').addEventListener('click', cleanupTrackAliases);
+    document.getElementById('create-track-alias').addEventListener('click', createTrackAlias);
+    toggleTrackAliasesButton.addEventListener('click', async () => {
+      const opening = !trackAliasPanel.classList.contains('open');
+      trackAliasPanel.classList.toggle('open', opening);
+      toggleTrackAliasesButton.textContent = opening ? 'Hide Track Alias List' : 'Show Track Alias List';
+      if (opening) {
+        await loadTrackAliases();
+      } else {
+        trackAliasStatus.textContent = 'Track alias list hidden.';
+      }
+    });
+    document.getElementById('create-backup').addEventListener('click', createBackup);
+    document.getElementById('generate-thumbnails').addEventListener('click', generateThumbnails);
+    document.getElementById('load-table-editor').addEventListener('click', loadTableEditorRows);
+    document.getElementById('save-table-editor').addEventListener('click', saveTableEditorRow);
+    document.getElementById('save-pins').addEventListener('click', async () => {
+      const adminPin = adminPinInput.value.trim();
+      const masterPin = masterPinInput.value.trim();
+      if (!adminPin && !masterPin) {
+        pinStatus.textContent = 'Enter at least one new regional PIN or use the reset buttons.';
+        return;
+      }
+      if (!window.confirm('Update regional PINs now?')) return;
+      await savePins({ edit_pin: adminPin || null, master_admin_pin: masterPin || null });
+    });
+    document.getElementById('clear-admin-pin').addEventListener('click', async () => {
+      if (!window.confirm('Reset this region Edit PIN and fall back to EDIT_PIN, ADMIN_PIN, or default?')) return;
+      await savePins({ clear_edit_override: true });
+    });
+    document.getElementById('clear-master-pin').addEventListener('click', async () => {
+      if (!window.confirm('Reset this region Master PIN and fall back to MASTER_ADMIN_PIN or default?')) return;
+      await savePins({ clear_master_override: true });
+    });
+    document.getElementById('clear-legacy-pins').addEventListener('click', async () => {
+      if (!window.confirm('Clear old global PIN overrides from the database? Regional PINs and environment/default fallbacks will remain.')) return;
+      await savePins({ clear_legacy_global_overrides: true });
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadOverview();
+      loadBackups();
+      loadUntagged();
+      loadTableEditorConfig();
+      loadAudit();
+    });
+  </script>
+</body>
+</html>
+

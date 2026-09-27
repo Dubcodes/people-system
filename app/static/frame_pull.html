@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Frame Pull Inbox</title>
+  <style>
+    main{max-width:1180px;margin:32px auto;padding:0 20px}.toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:20px 0}.toolbar label{display:grid;gap:5px;font-size:14px}.toolbar input,.toolbar select{min-height:38px;padding:7px}.status{font-size:14px;color:#667085}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}.item{border:1px solid #d0d5dd;border-radius:8px;overflow:hidden;background:#fff}.item img{width:100%;aspect-ratio:16/9;object-fit:cover;background:#f2f4f7}.item section{padding:14px}.meta{color:#667085;font-size:14px;margin:4px 0}.actions{display:flex;gap:8px;align-items:center;margin-top:12px}.actions select{min-width:0;flex:1}.notice{padding:12px;border:1px solid #b9d7ff;background:#eff8ff;border-radius:6px}.hidden{display:none}</style>
+</head>
+<body>
+  <main>
+    <a href="/">Back to People Intelligence</a>
+    <h1>Frame Pull Inbox</h1>
+    <p id="connection" class="status">Checking Frame Pull connection...</p>
+    <div class="toolbar">
+      <label>Import state<select id="state"><option value="ready">Ready to import</option><option value="imported">Imported</option><option value="all">All approved</option></select></label>
+      <label>Name<input id="name" type="search" placeholder="Search name"></label>
+      <label>Track<input id="track" type="search" placeholder="Search track"></label>
+      <button id="refresh" type="button">Refresh</button>
+    </div>
+    <div id="notice" class="notice hidden"></div>
+    <div id="items" class="grid"></div>
+  </main>
+  <script src="/static/admin_gate.js"></script>
+  <script>
+    const $=s=>document.querySelector(s),escapeHtml=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    async function request(path,options){const r=await fetch(path,options);if(!r.ok)throw new Error((await r.json().catch(()=>({}))).detail||'Request failed');return r.json()}
+    async function load(){
+      const q=new URLSearchParams({state:$('#state').value,name:$('#name').value,track:$('#track').value});
+      try{const data=await request('/api/frame-pull/inbox?'+q);$('#notice').classList.add('hidden');render(data.items)}catch(e){$('#notice').textContent=e.message;$('#notice').classList.remove('hidden');$('#items').innerHTML=''}
+    }
+    function render(items){$('#items').innerHTML=items.length?items.map(item=>{const key=`${item.source_kind}-${item.id}`;return `<article class="item"><img src="${item.portrait_proxy_url}" alt="${escapeHtml(item.name)} portrait"><section><h2>${escapeHtml(item.name||'Unresolved')}</h2><p class="meta">${escapeHtml(item.track||'Location uncertain')} · ${escapeHtml((item.roles||[]).join(', ')||'Role not supplied')}</p><p class="meta">${item.interview_count} interview${item.interview_count===1?'':'s'} · ${item.candidate_count} candidates</p>${item.import_state==='imported'?`<p class="meta">Imported to Person #${item.import.person_id}${item.import.acknowledged?'':' · acknowledgement pending'}</p>`:`<div class="actions"><select data-source="${key}"><option value="">Choose existing person</option>${(item.suggested_matches||[]).map(p=>`<option value="${p.id}">${escapeHtml(p.name)} suggested</option>`).join('')}</select><label title="Set this as the person's preferred photo"><input type="checkbox" data-preferred="${key}"> Preferred</label><button data-import-url="${item.import_url}" data-source-key="${key}" type="button">Import</button></div>`}</section></article>`}).join(''):'<p>No approved Frame Pull results match these filters.</p>';document.querySelectorAll('[data-import-url]').forEach(button=>button.onclick=()=>importResult(button.dataset.importUrl,button.dataset.sourceKey))}
+    async function importResult(url,key){const personId=document.querySelector(`[data-source="${key}"]`).value;if(!personId){alert('Choose the existing People person first.');return}if(!window.requireEditPin||!await window.requireEditPin('Enter Edit PIN to import this portrait'))return;try{await request(url,{method:'POST',headers:window.adminHeaders({'Content-Type':'application/json'}),body:JSON.stringify({person_id:Number(personId),make_preferred:document.querySelector(`[data-preferred="${key}"]`).checked})});await load()}catch(e){alert(e.message)}}
+    async function connection(){const s=await request('/api/frame-pull/status');$('#connection').textContent=s.state==='connected'?`Connected to Frame Pull service v${s.version}`:(s.message||'Frame Pull unavailable')}
+    $('#refresh').onclick=load;$('#state').onchange=load;$('#name').onchange=load;$('#track').onchange=load;connection();load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>Settings | Race Day People Intelligence</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#6b7280; --line:rgba(120,98,69,.18); --accent:#b94b2a; --accent-dark:#8f351d; --button:#f1e5d3; --button-active:#315f48; --button-active-dark:#214130; --button-secondary:#2f4858; --bg-a:#ecdfcf; --bg-b:#f6f1e7; --panel:rgba(255,250,242,.95); --shadow:0 16px 38px rgba(50,34,16,.12); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Georgia,"Times New Roman",serif; background:linear-gradient(135deg,var(--bg-a),var(--bg-b)); color:var(--ink); min-height:100vh; overflow-x:hidden; }
+    .page { width:min(1180px,100%); margin:0 auto; padding:20px; display:grid; gap:16px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:16px; box-shadow:var(--shadow); display:grid; gap:14px; min-width:0; }
+    .topbar,.section-header,.nav,.row,.actions,.chip-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+    .nav,.actions,.chip-row { justify-content:flex-start; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; align-items:start; }
+    .card { border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.54); padding:12px; display:grid; gap:10px; min-width:0; }
+    .theme-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; align-items:end; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.16em; font-size:11px; color:var(--accent); margin-bottom:4px; }
+    h1,h2,h3,p { margin:0; }
+    h1 { font-size:26px; }
+    h2 { font-size:20px; }
+    h3 { font-size:17px; }
+    .subtle { color:var(--muted); font-size:13px; }
+    .version-info { margin-top:6px; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:12px; }
+    input,select,textarea,button,.button-link { font:inherit; border-radius:10px; padding:9px 11px; border:1px solid var(--line); min-width:0; }
+    input,select,textarea { background:white; width:100%; }
+    input[type="color"] { min-height:42px; padding:4px; }
+    button,.button-link { background:var(--button); color:var(--ink); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:transform .08s ease, filter .08s ease, box-shadow .08s ease; }
+    button.primary,.button-link.primary,button.active { background:var(--accent-dark); color:white; border-color:transparent; }
+    button.danger { background:#8f2f1d; color:white; border-color:transparent; }
+    button.small { padding:6px 9px; font-size:13px; }
+    button:active,.button-link:active { transform:translateY(1px) scale(.98); filter:brightness(.92); box-shadow:inset 0 2px 8px rgba(0,0,0,.16); }
+    label.switch { position:relative; display:inline-flex; gap:8px; align-items:center; width:max-content; max-width:100%; padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:rgba(255,255,255,.58); cursor:pointer; }
+    label.switch input { position:absolute; opacity:0; pointer-events:none; width:0; height:0; }
+    label.switch.active { background:linear-gradient(180deg,var(--button-active),var(--button-active-dark)); border-color:transparent; color:white; }
+    label.field { display:grid; gap:6px; font-size:13px; color:var(--muted); }
+    .warning { border-color:rgba(143,47,29,.3); background:rgba(143,47,29,.08); color:#7a2a1c; }
+    .hidden { display:none !important; }
+    .empty { border:1px dashed var(--line); border-radius:12px; padding:13px; color:var(--muted); text-align:center; background:rgba(255,255,255,.45); }
+    details.race-day { border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.55); padding:10px; }
+    details.race-day summary { cursor:pointer; display:flex; gap:8px; align-items:center; justify-content:space-between; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { text-align:left; padding:8px 6px; border-bottom:1px solid rgba(120,98,69,.12); vertical-align:top; }
+    th { color:var(--muted); font-weight:normal; }
+    @media (max-width:700px) { .page { padding:12px; } button,.button-link { width:100%; } .nav a[aria-label="Help"] { width:28px !important; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="panel">
+      <div class="topbar">
+        <div>
+          <div class="eyebrow">Settings</div>
+          <h1>Display, Date, And Race-Day Convenience</h1>
+          <p class="subtle version-info" id="application-version">Version unavailable</p>
+        </div>
+        <div class="nav">
+          <a class="button-link" href="/">Viewer</a>
+          <a class="button-link" href="/ingest">Image Ingest</a>
+          <a class="button-link" href="/bulk-ingest">Bulk Ingest</a>
+          <a class="button-link" href="/records">Manage People</a>
+          <a class="button-link" href="/horses">Horses</a>
+          <a class="button-link" href="/race-ingest">Import Races</a>
+          <a class="button-link" href="/race-management">Race Management</a>
+          <a class="button-link" href="/loveracing">LOVERACING</a>
+          <a class="button-link primary" href="/settings">Settings</a>
+          <a class="button-link" href="/master-admin">Admin</a>
+          <a class="button-link" href="/help.html" aria-label="Help" title="Help">?</a>
+        </div>
+      </div>
+      <p class="subtle">This page is for local display choices and safe race-day convenience tools. Import, cleanup, recovery, and destructive tools live on their own locked pages.</p>
+    </section>
+
+    <section id="date-warning" class="panel warning hidden">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Date Override Active</div>
+          <h2 id="date-warning-title">Race date is being spoofed</h2>
+        </div>
+        <button type="button" id="clear-race-date-warning">Clear Date Override</button>
+      </div>
+      <p class="subtle">The Viewer will use this date for this browser until you clear it.</p>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div><div class="eyebrow">Viewer Defaults</div><h2>Layout And Behaviour</h2></div>
+        <button class="primary" type="button" id="save-settings">Save Settings</button>
+      </div>
+      <div class="grid">
+        <article class="card">
+          <h3>Viewer Layout</h3>
+          <label class="switch"><input id="show-side-panel" type="checkbox"> Show the right quick-look panel</label>
+          <label class="switch"><input id="large-quick-look" type="checkbox"> Use a larger quick-look panel</label>
+          <label class="switch"><input id="auto-race-mode" type="checkbox"> Auto Race Mode</label>
+          <label class="switch"><input id="hover-help" type="checkbox"> Show hover help</label>
+          <label class="field">Large panel boost % <input id="quick-look-boost" type="number" min="0" max="500" step="20"></label>
+        </article>
+        <article class="card">
+          <h3>Race Date Override</h3>
+          <p class="subtle">Use this only for testing imported meetings from another date. Applying it spoofs the active race date for this browser.</p>
+          <input id="race-date-override" type="date">
+          <button type="button" id="clear-race-date">Clear Date Override</button>
+        </article>
+      </div>
+      <div class="card">
+        <div class="section-header">
+          <div><h3>Theme Colors</h3><p class="subtle">Preset quick-click loads a saved theme. Long-hold a preset to save the current colors there.</p></div>
+          <div class="actions">
+            <button type="button" id="restore-theme">Restore Defaults</button>
+            <button type="button" class="preset-button" data-preset="1">Preset 1</button>
+            <button type="button" class="preset-button" data-preset="2">Preset 2</button>
+            <button type="button" class="preset-button" data-preset="3">Preset 3</button>
+          </div>
+        </div>
+        <div class="theme-grid">
+          <label class="field">Accent <input id="theme-accent" type="color"></label>
+          <label class="field">Accent Dark <input id="theme-accent-dark" type="color"></label>
+          <label class="field">Normal Buttons <input id="theme-button" type="color"></label>
+          <label class="field">Active Buttons <input id="theme-button-active" type="color"></label>
+          <label class="field">Active Button Dark <input id="theme-button-active-dark" type="color"></label>
+          <label class="field">Secondary Buttons <input id="theme-button-secondary" type="color"></label>
+          <label class="field">Background A <input id="theme-bg-a" type="color"></label>
+          <label class="field">Background B <input id="theme-bg-b" type="color"></label>
+        </div>
+      </div>
+      <p class="subtle" id="settings-status">Settings are ready.</p>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div><div class="eyebrow">Manual Attendees</div><h2>Add Or Remove Race-Day People</h2></div>
+        <button type="button" id="reload-attendees">Refresh</button>
+      </div>
+      <p class="subtle">Open race-day helper. Use this to add someone to pre-race or a selected race without unlocking admin pages. Add/remove actions are audit logged.</p>
+      <div class="form-grid">
+        <label class="field">Person <input id="attendee-person" type="text" list="people-list" placeholder="Search/select person"></label>
+        <label class="field">Track <select id="attendee-track"></select></label>
+        <label class="field">Date <input id="attendee-date" type="date"></label>
+        <label class="field">Scope <select id="attendee-race"><option value="">Pre-race</option></select></label>
+        <label class="field">Note <input id="attendee-note" type="text" placeholder="Optional note"></label>
+        <button class="primary" type="button" id="add-attendee">Add Attendee</button>
+      </div>
+      <datalist id="people-list"></datalist>
+      <div id="manual-attendees" class="card"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div><div class="eyebrow">Local Race Info</div><h2>Imported Race Days</h2></div>
+        <button type="button" id="reload-race-days">Refresh</button>
+      </div>
+      <p class="subtle">Read-only summary for this instance/region. Open a race day to inspect race counts and imported race labels.</p>
+      <div class="grid">
+        <article class="card"><h3>Upcoming / Current</h3><div id="upcoming-race-days"></div></article>
+        <article class="card"><h3>Recent</h3><div id="recent-race-days"></div></article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const storageKey = "peopleSystemSettings";
+    const presetKey = "peopleSystemThemePresets";
+    const defaultTheme = { accent: "#b94b2a", "accent-dark": "#8f351d", button: "#f1e5d3", "button-active": "#315f48", "button-active-dark": "#214130", "button-secondary": "#2f4858", "bg-a": "#ecdfcf", "bg-b": "#f6f1e7" };
+    const defaults = {
+      showSidePanel: true,
+      largeQuickLook: false,
+      autoRaceMode: false,
+      autoRacePaused: false,
+      quickLookBoostPercent: 60,
+      hoverHelp: true,
+      raceDateOverride: "",
+      raceDateOverrideSetOn: "",
+      theme: defaultTheme,
+    };
+    let settings = { ...defaults, ...(JSON.parse(localStorage.getItem(storageKey) || "{}")) };
+    settings.theme = { ...defaultTheme, ...(settings.theme || {}) };
+    let overviewPeople = [];
+    let raceDays = [];
+    let latestRaceData = null;
+
+    const status = document.getElementById("settings-status");
+    const applicationVersion = document.getElementById("application-version");
+    const showSidePanel = document.getElementById("show-side-panel");
+    const largeQuickLook = document.getElementById("large-quick-look");
+    const hoverHelp = document.getElementById("hover-help");
+    const autoRaceMode = document.getElementById("auto-race-mode");
+    const quickLookBoost = document.getElementById("quick-look-boost");
+    const raceDateOverride = document.getElementById("race-date-override");
+    const dateWarning = document.getElementById("date-warning");
+    const dateWarningTitle = document.getElementById("date-warning-title");
+    const attendeePerson = document.getElementById("attendee-person");
+    const attendeeTrack = document.getElementById("attendee-track");
+    const attendeeDate = document.getElementById("attendee-date");
+    const attendeeRace = document.getElementById("attendee-race");
+    const attendeeNote = document.getElementById("attendee-note");
+    const manualAttendees = document.getElementById("manual-attendees");
+    const upcomingRaceDays = document.getElementById("upcoming-race-days");
+    const recentRaceDays = document.getElementById("recent-race-days");
+    const colorInputs = {
+      accent: document.getElementById("theme-accent"),
+      "accent-dark": document.getElementById("theme-accent-dark"),
+      button: document.getElementById("theme-button"),
+      "button-active": document.getElementById("theme-button-active"),
+      "button-active-dark": document.getElementById("theme-button-active-dark"),
+      "button-secondary": document.getElementById("theme-button-secondary"),
+      "bg-a": document.getElementById("theme-bg-a"),
+      "bg-b": document.getElementById("theme-bg-b"),
+    };
+
+    function nzTodayKey() {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Auckland", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    }
+
+    function escapeText(value) {
+      return String(value || "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[char]));
+    }
+
+    function optionValue(value) {
+      return escapeText(value).replace(/"/g, "&quot;");
+    }
+
+    function renderApplicationVersion(metadata) {
+      const version = String(metadata?.version || "").trim();
+      const releaseStatus = String(metadata?.status || "").trim();
+      if (!version || !releaseStatus) {
+        applicationVersion.textContent = "Version unavailable";
+        applicationVersion.removeAttribute("title");
+        return;
+      }
+      applicationVersion.textContent = `Version v${version} · ${releaseStatus}`;
+      const details = [metadata.stable_base ? `Stable base: v${metadata.stable_base}` : "", metadata.date || ""].filter(Boolean);
+      if (details.length) applicationVersion.title = details.join(" · ");
+      else applicationVersion.removeAttribute("title");
+    }
+
+    async function loadApplicationVersion() {
+      try {
+        const response = await fetch("/static/version.json", { cache: "no-store", headers: { "Cache-Control": "no-cache" } });
+        if (!response.ok) throw new Error("Version metadata unavailable");
+        renderApplicationVersion(await response.json());
+      } catch (_) {
+        applicationVersion.textContent = "Version unavailable";
+        applicationVersion.removeAttribute("title");
+      }
+    }
+
+    function clearStaleRaceDateOverride() {
+      const todayKey = nzTodayKey();
+      if (settings.raceDateOverride && settings.raceDateOverrideSetOn !== todayKey) {
+        settings.raceDateOverride = "";
+        settings.raceDateOverrideSetOn = "";
+        localStorage.setItem(storageKey, JSON.stringify(settings));
+      }
+    }
+
+    function applyTheme() {
+      Object.entries(settings.theme).forEach(([key, value]) => {
+        if (value) document.documentElement.style.setProperty(`--${key}`, value);
+      });
+    }
+
+    function hydrateForm() {
+      showSidePanel.checked = settings.showSidePanel !== false;
+      largeQuickLook.checked = settings.largeQuickLook === true;
+      hoverHelp.checked = settings.hoverHelp !== false;
+      autoRaceMode.checked = settings.autoRaceMode === true;
+      const boost = Number(settings.quickLookBoostPercent);
+      quickLookBoost.value = Math.max(0, Math.min(500, Number.isFinite(boost) ? boost : defaults.quickLookBoostPercent));
+      raceDateOverride.value = settings.raceDateOverride || "";
+      Object.entries(colorInputs).forEach(([key, input]) => { input.value = settings.theme[key] || defaultTheme[key]; });
+      refreshSwitchLabels();
+      updateDateWarning();
+    }
+
+    function collectSettings() {
+      settings = {
+        ...settings,
+        showSidePanel: showSidePanel.checked,
+        largeQuickLook: largeQuickLook.checked,
+        hoverHelp: hoverHelp.checked,
+        autoRaceMode: autoRaceMode.checked,
+        autoRacePaused: false,
+        quickLookBoostPercent: Math.max(0, Math.min(500, Number.isFinite(Number(quickLookBoost.value)) ? Number(quickLookBoost.value) : defaults.quickLookBoostPercent)),
+        raceDateOverride: raceDateOverride.value,
+        raceDateOverrideSetOn: raceDateOverride.value ? nzTodayKey() : "",
+        theme: Object.fromEntries(Object.entries(colorInputs).map(([key, input]) => [key, input.value])),
+      };
+    }
+
+    function saveSettings(message = "Settings saved.") {
+      collectSettings();
+      localStorage.setItem(storageKey, JSON.stringify(settings));
+      applyTheme();
+      updateDateWarning();
+      refreshSwitchLabels();
+      status.textContent = message;
+    }
+
+    function refreshSwitchLabels() {
+      document.querySelectorAll("label.switch").forEach(label => {
+        const input = label.querySelector("input[type='checkbox']");
+        label.classList.toggle("active", Boolean(input?.checked));
+      });
+    }
+
+    function updateDateWarning() {
+      if (!raceDateOverride.value) {
+        dateWarning.classList.add("hidden");
+        return;
+      }
+      dateWarning.classList.remove("hidden");
+      dateWarningTitle.textContent = `Race date override active: ${raceDateOverride.value}`;
+    }
+
+    function confirmDateOverride(value) {
+      if (!value) return true;
+      return window.confirm(`Apply race date override ${value}?\n\nThis spoofs the active race date for this browser/session and is intended for testing imported meetings from another date.`);
+    }
+
+    function themePresets() {
+      try { return JSON.parse(localStorage.getItem(presetKey) || "{}"); }
+      catch (_) { return {}; }
+    }
+
+    function saveThemePresets(presets) {
+      localStorage.setItem(presetKey, JSON.stringify(presets));
+    }
+
+    function saveThemeToPreset(slot) {
+      if (!window.confirm(`Save the current theme colors to Preset ${slot}?`)) return;
+      const presets = themePresets();
+      presets[slot] = { ...settings.theme };
+      saveThemePresets(presets);
+      status.textContent = `Theme saved to Preset ${slot}.`;
+    }
+
+    function loadThemePreset(slot) {
+      const preset = themePresets()[slot];
+      if (!preset) {
+        status.textContent = `Preset ${slot} is empty. Long-hold it to save the current colors.`;
+        return;
+      }
+      settings.theme = { ...defaultTheme, ...preset };
+      hydrateForm();
+      saveSettings(`Loaded Preset ${slot}.`);
+    }
+
+    function wirePresetButton(button) {
+      let timer = null;
+      let longHeld = false;
+      const slot = button.dataset.preset;
+      button.addEventListener("pointerdown", () => {
+        longHeld = false;
+        timer = setTimeout(() => {
+          longHeld = true;
+          collectSettings();
+          saveThemeToPreset(slot);
+        }, 750);
+      });
+      ["pointerup", "pointerleave", "pointercancel"].forEach(eventName => {
+        button.addEventListener(eventName, () => {
+          if (timer) clearTimeout(timer);
+        });
+      });
+      button.addEventListener("click", event => {
+        if (longHeld) {
+          event.preventDefault();
+          return;
+        }
+        loadThemePreset(slot);
+      });
+    }
+
+    async function loadSuggestions() {
+      const [suggestionResponse, overviewResponse] = await Promise.all([
+        fetch("/api/suggestions"),
+        fetch("/api/people/overview?region_scope=all"),
+      ]);
+      const suggestions = suggestionResponse.ok ? await suggestionResponse.json() : {};
+      overviewPeople = overviewResponse.ok ? ((await overviewResponse.json()).all_people || []) : [];
+      document.getElementById("people-list").innerHTML = overviewPeople
+        .map(person => `<option value="${optionValue(person.name)}"></option>`)
+        .join("");
+      return suggestions;
+    }
+
+    function selectedPerson() {
+      const name = attendeePerson.value.trim().toLowerCase();
+      return overviewPeople.find(person => person.name.toLowerCase() === name || (person.aliases || []).some(alias => alias.toLowerCase() === name));
+    }
+
+    async function loadRaceDays() {
+      const response = await fetch("/api/races/days");
+      const payload = response.ok ? await response.json() : { race_days: [] };
+      raceDays = payload.race_days || [];
+      renderRaceDaySummary();
+      populateAttendeeSelectors();
+    }
+
+    function renderRaceDayList(days) {
+      if (!days.length) return '<div class="empty">No race days found.</div>';
+      return days.map(day => `
+        <details class="race-day">
+          <summary><strong>${escapeText(day.track)} - ${escapeText(day.date)}</strong><span class="subtle">${day.race_count} races, ${day.runner_count} runners</span></summary>
+          <table>
+            <thead><tr><th>Race</th><th>Time</th><th>Name</th><th>Runners</th></tr></thead>
+            <tbody>${(day.races || []).map(race => `<tr><td>R${race.race_number}</td><td>${escapeText(race.start_time || "-")}</td><td>${escapeText(race.race_name || "-")}</td><td>${race.runner_count || 0}</td></tr>`).join("")}</tbody>
+          </table>
+        </details>
+      `).join("");
+    }
+
+    function renderRaceDaySummary() {
+      const today = nzTodayKey();
+      const sorted = [...raceDays].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      const upcoming = sorted.filter(day => day.date >= today).slice(0, 4);
+      const recent = sorted.filter(day => day.date < today).reverse().slice(0, 4);
+      upcomingRaceDays.innerHTML = renderRaceDayList(upcoming);
+      recentRaceDays.innerHTML = renderRaceDayList(recent);
+    }
+
+    function populateAttendeeSelectors() {
+      const tracks = [...new Set(raceDays.map(day => day.track).filter(Boolean))].sort();
+      const selectedTrack = attendeeTrack.value || tracks[0] || "";
+      attendeeTrack.innerHTML = tracks.map(track => `<option value="${optionValue(track)}">${escapeText(track)}</option>`).join("");
+      attendeeTrack.value = tracks.includes(selectedTrack) ? selectedTrack : (tracks[0] || "");
+      attendeeDate.value = attendeeDate.value || settings.raceDateOverride || nzTodayKey();
+    }
+
+    async function loadRaceChoices() {
+      attendeeRace.innerHTML = '<option value="">Pre-race</option>';
+      if (!attendeeTrack.value || !attendeeDate.value) return;
+      const params = new URLSearchParams({ track: attendeeTrack.value, race_date: attendeeDate.value });
+      const response = await fetch(`/api/races/today?${params.toString()}`);
+      latestRaceData = response.ok ? await response.json() : null;
+      const races = latestRaceData?.races || [];
+      attendeeRace.innerHTML = '<option value="">Pre-race</option>' + races.map(race => `<option value="${race.id}">R${race.race_number} - ${escapeText(race.start_time || "")} ${escapeText(race.race_name || "")}</option>`).join("");
+    }
+
+    async function loadManualAttendees() {
+      const params = new URLSearchParams();
+      if (attendeeTrack.value) params.set("track", attendeeTrack.value);
+      if (attendeeDate.value) params.set("race_date", attendeeDate.value);
+      const response = await fetch(`/api/races/manual-attendees?${params.toString()}`);
+      const rows = response.ok ? await response.json() : [];
+      if (!rows.length) {
+        manualAttendees.innerHTML = '<div class="empty">No manual attendees for this date and track.</div>';
+        return;
+      }
+      manualAttendees.innerHTML = `
+        <table>
+          <thead><tr><th>Person</th><th>Scope</th><th>Note</th><th></th></tr></thead>
+          <tbody>${rows.map(row => `
+            <tr>
+              <td>${escapeText(row.person_name)}</td>
+              <td>${escapeText(row.race_label || "Pre-race")}</td>
+              <td>${escapeText(row.note || "")}</td>
+              <td><button class="small danger" type="button" data-remove-attendee="${row.id}">Remove</button></td>
+            </tr>
+          `).join("")}</tbody>
+        </table>
+      `;
+      manualAttendees.querySelectorAll("[data-remove-attendee]").forEach(button => {
+        button.addEventListener("click", async () => {
+          if (!window.confirm("Remove this manual attendee from the selected race-day scope?")) return;
+          await fetch(`/api/races/manual-attendees/${button.dataset.removeAttendee}`, { method: "DELETE" });
+          await loadManualAttendees();
+        });
+      });
+    }
+
+    async function addManualAttendee() {
+      const person = selectedPerson();
+      if (!person) {
+        status.textContent = "Choose a person from the list before adding.";
+        return;
+      }
+      const payload = {
+        person_id: person.id,
+        track: attendeeTrack.value,
+        race_date: attendeeDate.value,
+        race_id: attendeeRace.value ? Number(attendeeRace.value) : null,
+        note: attendeeNote.value || null,
+      };
+      const response = await fetch("/api/races/manual-attendees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        status.textContent = error.detail || "Could not add attendee.";
+        return;
+      }
+      attendeeNote.value = "";
+      status.textContent = `${person.name} added to ${attendeeRace.value ? "selected race" : "pre-race"}.`;
+      await loadManualAttendees();
+    }
+
+    async function refreshAttendeeContext() {
+      await loadRaceChoices();
+      await loadManualAttendees();
+    }
+
+    clearStaleRaceDateOverride();
+    applyTheme();
+    hydrateForm();
+    loadApplicationVersion();
+    document.querySelectorAll("label.switch input[type='checkbox']").forEach(input => input.addEventListener("change", refreshSwitchLabels));
+    Object.values(colorInputs).forEach(input => input.addEventListener("input", () => {
+      collectSettings();
+      applyTheme();
+    }));
+    document.querySelectorAll(".preset-button").forEach(wirePresetButton);
+    document.getElementById("restore-theme").addEventListener("click", () => {
+      settings.theme = { ...defaultTheme };
+      hydrateForm();
+      saveSettings("Default theme restored.");
+    });
+    document.getElementById("save-settings").addEventListener("click", () => saveSettings());
+    raceDateOverride.addEventListener("change", () => {
+      if (!confirmDateOverride(raceDateOverride.value)) {
+        raceDateOverride.value = settings.raceDateOverride || "";
+        return;
+      }
+      saveSettings(raceDateOverride.value ? "Race date override applied." : "Race date override cleared.");
+      attendeeDate.value = raceDateOverride.value || attendeeDate.value;
+      refreshAttendeeContext();
+    });
+    [document.getElementById("clear-race-date"), document.getElementById("clear-race-date-warning")].forEach(button => {
+      button.addEventListener("click", () => {
+        raceDateOverride.value = "";
+        saveSettings("Race date override cleared.");
+      });
+    });
+    attendeeTrack.addEventListener("change", refreshAttendeeContext);
+    attendeeDate.addEventListener("change", refreshAttendeeContext);
+    document.getElementById("reload-attendees").addEventListener("click", refreshAttendeeContext);
+    document.getElementById("reload-race-days").addEventListener("click", loadRaceDays);
+    document.getElementById("add-attendee").addEventListener("click", addManualAttendee);
+
+    Promise.all([loadSuggestions(), loadRaceDays()])
+      .then(refreshAttendeeContext)
+      .catch(error => {
+        console.warn(error);
+        status.textContent = "Some race-day helper data could not be loaded.";
+      });
+  </script>
+</body>
+</html>

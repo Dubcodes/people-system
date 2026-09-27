@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>Operator View | Race Day People Intelligence</title>
+  <style>
+    :root { --ink:#17212b; --muted:#657282; --line:rgba(50,40,28,.18); --accent:#b94b2a; --button:#f1e5d3; --button-active:#315f48; --button-active-dark:#214130; --button-secondary:#2f4858; --panel:rgba(255,250,242,.96); --bg-a:#ece0cf; --bg-b:#f7f1e7; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Georgia,"Times New Roman",serif; color:var(--ink); background:linear-gradient(135deg,var(--bg-a),var(--bg-b)); min-height:100vh; }
+    body.sync-lost::after { content:""; position:fixed; inset:0; z-index:1000; border:3px solid #c92a2a; pointer-events:none; }
+    .page { padding:8px; display:grid; gap:8px; }
+    .top { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:8px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+    h1,h2,h3,p { margin:0; }
+    .subtle { color:var(--muted); font-size:13px; }
+    .featured { display:none; border:4px solid #2f9e44; border-radius:18px; overflow:hidden; background:#111; min-height:220px; position:relative; }
+    .featured.visible { display:block; }
+    .featured img { width:100%; height:52vh; object-fit:cover; display:block; }
+    .featured .label { position:absolute; left:0; right:0; bottom:0; padding:14px; color:white; background:linear-gradient(180deg,transparent,rgba(0,0,0,.86)); font-size:26px; font-weight:bold; }
+    .featured.identity { min-height:0; background:var(--panel); position:static; }
+    .selected-person-card { display:grid; gap:4px; padding:13px 15px; background:linear-gradient(135deg,rgba(226,244,229,.96),rgba(255,250,242,.96)); }
+    .selected-person-kicker { color:#24733a; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:11px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; }
+    .selected-person-name { font-size:clamp(22px,6vw,28px); font-weight:bold; line-height:1.05; overflow-wrap:anywhere; }
+    .selected-person-role { color:var(--muted); font-size:14px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(115px,1fr)); gap:8px; }
+    .footer-controls { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
+    .operator-controls { justify-content:space-between; }
+    .operator-search { position:relative; margin-left:auto; }
+    .operator-search-panel { display:none; position:absolute; right:0; top:calc(100% + 6px); z-index:20; width:min(340px,calc(100vw - 24px)); border:1px solid var(--line); border-radius:14px; background:var(--panel); padding:8px; box-shadow:0 12px 26px rgba(20,16,12,.16); }
+    .operator-search-panel.open { display:grid; gap:8px; }
+    .operator-search-panel input { width:100%; font:inherit; border-radius:10px; border:1px solid var(--line); padding:8px 10px; }
+    .suggestions { display:grid; gap:5px; max-height:260px; overflow:auto; }
+    .suggestion { justify-content:flex-start; width:100%; background:rgba(255,255,255,.72); }
+    .card { min-height:145px; position:relative; overflow:hidden; border-radius:14px; border:1px solid var(--line); background:linear-gradient(135deg,#d8c6ad,#efe3d1); cursor:pointer; display:flex; align-items:flex-end; padding:8px; }
+    .card img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+    .card::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg,transparent 35%,rgba(0,0,0,.88)); }
+    .card.selected { outline:4px solid #2f9e44; outline-offset:2px; }
+    .card.operator { outline:4px solid #f08c00; outline-offset:2px; }
+    .name { position:relative; z-index:1; color:white; font-size:14px; font-weight:bold; }
+    button,.button-link { font:inherit; border-radius:12px; padding:8px 10px; border:1px solid var(--line); background:var(--button, white); color:var(--ink); white-space:nowrap; transition:transform .08s ease, filter .08s ease, box-shadow .08s ease; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+    button:active,.button-link:active { transform:translateY(1px) scale(.98); filter:brightness(.92); box-shadow:inset 0 2px 8px rgba(0,0,0,.16); }
+    button.active { background:var(--button-active, var(--accent)); color:white; border-color:transparent; }
+    .top-actions { display:flex; align-items:center; gap:6px; margin-left:auto; }
+    .compact-action { min-width:34px; min-height:34px; padding:5px 8px; font-size:16px; }
+    .sync-status { min-height:28px; padding:4px 6px; border-radius:999px; color:var(--muted); background:rgba(255,255,255,.55); font-size:11px; }
+    .sync-status .sync-dot { width:8px; height:8px; border-radius:50%; background:#2f9e44; display:block; flex:0 0 auto; }
+    .sync-status .sync-label { display:none; }
+    .sync-status.sync-lost { color:#a61e1e; border-color:rgba(201,42,42,.45); background:rgba(255,235,235,.78); }
+    .sync-status.sync-lost .sync-dot { background:#c92a2a; }
+    .sync-status.sync-lost .sync-label { display:inline; }
+    @media (max-width:600px) {
+      .page { padding:5px; gap:5px; }
+      .top { gap:5px; padding:5px; border-radius:10px; }
+      .operator-controls { flex-wrap:nowrap; }
+      .operator-controls .footer-controls { flex:1; min-width:0; }
+      .operator-controls #toggle-all-top { width:100%; min-height:36px; }
+      .top-actions { gap:4px; }
+      .compact-action, .sync-status { min-width:34px; min-height:34px; }
+      .featured { min-height:220px; border-radius:12px; }
+      .featured img { height:min(56vh,440px); }
+      .featured.identity { min-height:0; }
+      .selected-person-card { padding:10px 12px; }
+      .selected-person-name { font-size:22px; }
+      .mode-label { margin:0 2px; }
+      #tracks { overflow-x:auto; flex-wrap:nowrap; }
+      #tracks button { min-width:52px; min-height:34px; padding:6px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="top operator-controls">
+      <div class="footer-controls">
+        <button type="button" id="toggle-all-top">Show All Records</button>
+        <button type="button" id="toggle-region-scope-top" style="display:none">Show All Regions</button>
+      </div>
+      <div class="top-actions">
+        <div class="operator-search">
+          <button type="button" id="operator-search-toggle" class="compact-action" aria-label="Search" title="Search">⌕</button>
+          <div class="operator-search-panel" id="operator-search-panel">
+            <input id="operator-search" type="search" placeholder="Search name, alias, or stable" autocomplete="off">
+            <div class="suggestions" id="operator-suggestions"></div>
+          </div>
+        </div>
+        <button class="sync-status" id="sync-reconnect" type="button" title="Refresh shared state" aria-label="Refresh shared state"><span class="sync-dot"></span><span class="sync-label">Sync lost</span></button>
+        <button id="fullscreen-toggle" class="compact-action" type="button" aria-label="Enter full screen" title="Enter full screen">⛶</button>
+      </div>
+    </section>
+    <section class="top" id="tracks"></section>
+    <section class="featured" id="featured"></section>
+    <p class="subtle" id="mode-label">Following main viewer</p>
+    <section class="grid" id="grid"></section>
+    <section class="footer-controls">
+      <button type="button" id="toggle-all">Show All Records</button>
+      <button type="button" id="toggle-region-scope" style="display:none">Show All Regions</button>
+      <a class="button-link" href="/help.html" aria-label="Help" title="Help">?</a>
+    </section>
+  </main>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const featured = document.getElementById('featured');
+    const tracks = document.getElementById('tracks');
+    const modeLabel = document.getElementById('mode-label');
+    const settings = JSON.parse(localStorage.getItem('peopleSystemSettings') || '{}');
+    const theme = settings.theme || {};
+    Object.entries(theme).forEach(([key, value]) => { if (value) document.documentElement.style.setProperty(`--${key}`, value); });
+    let currentState = {};
+    let people = [];
+    let selectedPerson = null;
+    let lastOverviewKey = '';
+    let lastSelectedPersonKey = '';
+    let lastFeaturedRenderKey = '';
+    let refreshInFlight = false;
+    let showAllRecords = false;
+    let allPeople = [];
+    let allPeopleLoadedFor = '';
+    let allPeopleLoaded = false;
+    let allPeopleScope = 'current';
+    let currentRegion = '';
+    let showPeopleWithoutImages = false;
+    let operatorSearchQuery = '';
+    const toggleAllButtons = [
+      document.getElementById('toggle-all-top'),
+      document.getElementById('toggle-all'),
+    ].filter(Boolean);
+    const toggleRegionScopeButtons = [
+      document.getElementById('toggle-region-scope-top'),
+      document.getElementById('toggle-region-scope'),
+    ].filter(Boolean);
+    const operatorSearchToggle = document.getElementById('operator-search-toggle');
+    const operatorSearchPanel = document.getElementById('operator-search-panel');
+    const operatorSearchInput = document.getElementById('operator-search');
+    const operatorSuggestions = document.getElementById('operator-suggestions');
+    const syncReconnectButton = document.getElementById('sync-reconnect');
+    const fullscreenToggle = document.getElementById('fullscreen-toggle');
+    const STATE_POLL_INTERVAL_MS = 2000;
+    const STATE_REQUEST_TIMEOUT_MS = 8000;
+    const SYNC_LOST_AFTER_MS = 15000;
+    const STATE_RETRY_MAX_MS = 10000;
+    let statePollTimer = null;
+    let statePollController = null;
+    let statePollForceRequested = false;
+    let stateMonitoringStartedAt = Date.now();
+    let lastStateSuccessAt = 0;
+    let stateRetryDelayMs = STATE_POLL_INTERVAL_MS;
+    let syncLost = false;
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    }
+
+    function loadProgressiveImage(image) {
+      const fullSrc = image?.dataset?.fullSrc;
+      if (!fullSrc) return;
+      const loader = new Image();
+      loader.onload = () => { image.src = fullSrc; image.classList.add('full-loaded'); };
+      loader.src = fullSrc;
+    }
+
+    function updateSyncPresentation() {
+      const lastKnownActivity = Math.max(stateMonitoringStartedAt, lastStateSuccessAt || 0);
+      const nextSyncLost = Date.now() - lastKnownActivity >= SYNC_LOST_AFTER_MS;
+      if (nextSyncLost !== syncLost) syncLost = nextSyncLost;
+      document.body.classList.toggle('sync-lost', syncLost);
+      syncReconnectButton.classList.toggle('sync-lost', syncLost);
+      syncReconnectButton.title = syncLost ? 'Sync lost. Reconnect now' : 'Synced. Refresh shared state';
+      syncReconnectButton.setAttribute('aria-label', syncReconnectButton.title);
+    }
+
+    function noteStateSuccess() {
+      lastStateSuccessAt = Date.now();
+      stateRetryDelayMs = STATE_POLL_INTERVAL_MS;
+      syncLost = false;
+      updateSyncPresentation();
+    }
+
+    function noteStateFailure() {
+      stateRetryDelayMs = Math.min(STATE_RETRY_MAX_MS, Math.max(STATE_POLL_INTERVAL_MS, stateRetryDelayMs * 2));
+      updateSyncPresentation();
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = STATE_REQUEST_TIMEOUT_MS) {
+      const controller = options.controller || new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        if (!response.ok) throw new Error(`Request failed (${response.status})`);
+        return response;
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    }
+
+    async function fetchState() {
+      const response = await fetchWithTimeout('/api/viewer-state', { controller: statePollController });
+      currentState = await response.json();
+      noteStateSuccess();
+      return currentState;
+    }
+
+    async function loadViewerPreferences(controller = null) {
+      try {
+        const response = await fetchWithTimeout('/api/viewer-state/preferences', controller ? { controller } : {});
+        const prefs = await response.json();
+        showPeopleWithoutImages = Boolean(prefs.show_people_without_images);
+      } catch (_) {}
+    }
+
+    async function fetchSelectedPerson(controller = null) {
+      if (!currentState.selected_person_id) return;
+      const params = new URLSearchParams();
+      if (currentState.race_date) params.set('race_date', currentState.race_date);
+      if (currentState.selected_track) params.set('track', currentState.selected_track);
+      const key = `${currentState.selected_person_id}|${params.toString()}`;
+      if (key === lastSelectedPersonKey && selectedPerson) return;
+      const response = await fetchWithTimeout(
+        `/api/people/${currentState.selected_person_id}${params.toString() ? `?${params}` : ''}`,
+        controller ? { controller } : {},
+      );
+      selectedPerson = await response.json();
+      lastSelectedPersonKey = key;
+    }
+
+    async function loadOverview(controller = null) {
+      const params = new URLSearchParams();
+      if (currentState.selected_track) params.set('track', currentState.selected_track);
+      if (currentState.race_date) params.set('race_date', currentState.race_date);
+      if (currentState.pre_mode !== false) params.set('pre', 'true');
+      else if (currentState.selected_race_id) params.set('race_id', currentState.selected_race_id);
+      const overviewKey = params.toString();
+      if (overviewKey === lastOverviewKey && people.length) {
+        renderFeatured();
+        renderGrid();
+        return;
+      }
+      const response = await fetchWithTimeout(`/api/people/overview?${params}`, controller ? { controller } : {});
+      const overview = await response.json();
+      lastOverviewKey = overviewKey;
+      currentRegion = overview.current_region || currentRegion;
+      people = (overview.pre_mode ? overview.priority_people : overview.active_race)
+        .filter(person => showPeopleWithoutImages || person.image_url);
+      const fallbackPrefix = overview.is_fallback_day && overview.race_day ? `Latest imported day ${overview.race_day} - ` : '';
+      modeLabel.textContent = overview.pre_mode ? `${fallbackPrefix}${overview.selected_track || 'Meeting'} pre-race` : `${fallbackPrefix}${overview.active_race_meta?.label || 'Race focus'}`;
+      renderTracks(overview);
+      renderFeatured();
+      renderGrid();
+    }
+
+    async function ensureAllPeopleLoaded(controller = null) {
+      const params = new URLSearchParams();
+      if (currentState.selected_track) params.set('track', currentState.selected_track);
+      if (currentState.race_date) params.set('race_date', currentState.race_date);
+      params.set('region_scope', allPeopleScope);
+      const cacheKey = params.toString();
+      if (allPeopleLoaded && allPeopleLoadedFor === cacheKey) return;
+      toggleAllButtons.forEach(button => { button.textContent = 'Loading...'; });
+      const response = await fetchWithTimeout(`/api/people/overview?${params}`, controller ? { controller } : {});
+      const overview = await response.json();
+      allPeopleLoadedFor = cacheKey;
+      allPeopleLoaded = true;
+      currentRegion = overview.current_region || currentRegion;
+      allPeople = (overview.all_people || []).filter(person => showPeopleWithoutImages || person.image_url);
+    }
+
+    function normalizeSearchText(value) {
+      return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+    }
+
+    function searchValueMatches(value, query) {
+      const candidate = normalizeSearchText(value);
+      const normalised = normalizeSearchText(query);
+      if (!normalised) return true;
+      if (!candidate) return false;
+      if (candidate.includes(normalised)) return true;
+      const candidateTokens = candidate.split(' ');
+      const queryTokens = normalised.split(' ');
+      let candidateIndex = 0;
+      return queryTokens.every(queryToken => {
+        while (candidateIndex < candidateTokens.length && !candidateTokens[candidateIndex].startsWith(queryToken)) candidateIndex += 1;
+        if (candidateIndex >= candidateTokens.length) return false;
+        candidateIndex += 1;
+        return true;
+      });
+    }
+
+    function personMatchesSearch(person, query) {
+      const haystacks = [
+        person.name,
+        ...(person.aliases || []),
+        ...(person.stables || []),
+        ...(person.roles || []),
+      ];
+      return haystacks.some(value => searchValueMatches(value, query));
+    }
+
+    function searchSourcePeople() {
+      return showAllRecords ? allPeople : people;
+    }
+
+    function renderSearchSuggestions() {
+      const query = operatorSearchInput.value.trim();
+      operatorSearchQuery = query;
+      if (!query) {
+        operatorSuggestions.innerHTML = '<span class="subtle">Start typing a name.</span>';
+        return;
+      }
+      const matches = searchSourcePeople().filter(person => personMatchesSearch(person, query)).slice(0, 8);
+      operatorSuggestions.innerHTML = matches.map(person => `
+        <button type="button" class="suggestion" data-search-name="${escapeHtml(person.name)}">${escapeHtml(person.name)}</button>
+      `).join('') || '<span class="subtle">No matches.</span>';
+      operatorSuggestions.querySelectorAll('[data-search-name]').forEach(button => {
+        button.addEventListener('click', () => {
+          operatorSearchInput.value = button.dataset.searchName || '';
+          operatorSearchQuery = operatorSearchInput.value;
+          renderGrid();
+          operatorSearchPanel.classList.remove('open');
+        });
+      });
+    }
+
+    function renderTracks(overview) {
+      tracks.innerHTML = (overview.tracks || []).map(track => {
+        const active = track === overview.selected_track ? 'active' : '';
+        return `<button type="button" class="${active}" disabled aria-current="${active ? 'true' : 'false'}">${escapeHtml(track)}</button>`;
+      }).join('') || '<span class="subtle">No race locations loaded.</span>';
+    }
+
+    function renderFeatured() {
+      if (!selectedPerson) {
+        featured.classList.remove('visible');
+        featured.classList.remove('identity');
+        if (lastFeaturedRenderKey) {
+          featured.innerHTML = '';
+          lastFeaturedRenderKey = '';
+        }
+        return;
+      }
+      const renderKey = [
+        selectedPerson.id || '',
+        selectedPerson.thumbnail_url || '',
+        selectedPerson.image_url || '',
+        selectedPerson.name || '',
+        (selectedPerson.roles || []).join('|'),
+      ].join('|');
+      if (renderKey === lastFeaturedRenderKey) return;
+      lastFeaturedRenderKey = renderKey;
+      featured.classList.add('visible');
+      if (!selectedPerson.image_url) {
+        const primaryRole = (selectedPerson.roles || []).find(Boolean) || '';
+        featured.classList.add('identity');
+        featured.innerHTML = `<div class="selected-person-card"><div class="selected-person-kicker">Selected Person</div><div class="selected-person-name">${escapeHtml(selectedPerson.name)}</div>${primaryRole ? `<div class="selected-person-role">${escapeHtml(primaryRole)}</div>` : '<div class="selected-person-role">No image available</div>'}</div>`;
+        return;
+      }
+      featured.classList.remove('identity');
+      featured.innerHTML = `<img class="progressive-image" src="${selectedPerson.thumbnail_url || selectedPerson.image_url}" data-full-src="${selectedPerson.image_url}" alt="${escapeHtml(selectedPerson.name)}"><div class="label">${escapeHtml(selectedPerson.name)}</div>`;
+      loadProgressiveImage(featured.querySelector('img.progressive-image'));
+    }
+
+    function renderGrid() {
+      const visiblePeople = searchSourcePeople().filter(person => personMatchesSearch(person, operatorSearchQuery));
+      grid.innerHTML = visiblePeople.map(person => {
+        const selected = person.id === currentState.selected_person_id ? ' selected' : '';
+        const operator = person.id === currentState.operator_highlight_person_id ? ' operator' : '';
+        const imageMarkup = person.thumbnail_url || person.image_url ? `<img src="${person.thumbnail_url || person.image_url}" alt="${escapeHtml(person.name)}">` : '';
+        return `<article class="card${selected}${operator}" data-person-id="${person.id}">${imageMarkup}<div class="name">${escapeHtml(person.name)}</div></article>`;
+      }).join('') || `<div class="subtle">${showAllRecords ? 'No records available for all-records view.' : 'No image records for this view.'}</div>`;
+      grid.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('click', async () => {
+          await postSharedState({ operator_highlight_person_id:Number(card.dataset.personId) });
+          await reconnectNow();
+        });
+      });
+    }
+
+    function scheduleStatePoll(delayMs = STATE_POLL_INTERVAL_MS) {
+      if (statePollTimer) window.clearTimeout(statePollTimer);
+      statePollTimer = window.setTimeout(() => refresh(), delayMs);
+    }
+
+    async function postSharedState(payload) {
+      try {
+        const response = await fetchWithTimeout('/api/viewer-state', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload),
+        });
+        currentState = await response.json();
+        noteStateSuccess();
+        return true;
+      } catch (_) {
+        noteStateFailure();
+        return false;
+      }
+    }
+
+    async function refresh() {
+      if (refreshInFlight) return;
+      refreshInFlight = true;
+      statePollController = new AbortController();
+      const forcedRefresh = statePollForceRequested || syncLost;
+      statePollForceRequested = false;
+      try {
+        const previousSelectedId = currentState.selected_person_id || null;
+        const previousImageVisibility = showPeopleWithoutImages;
+        await fetchState();
+        try {
+          await loadViewerPreferences(statePollController);
+          if (previousImageVisibility !== showPeopleWithoutImages) {
+            lastOverviewKey = '';
+            allPeopleLoaded = false;
+          }
+        } catch (_) {}
+        if (!currentState.selected_person_id) {
+          selectedPerson = null;
+          lastSelectedPersonKey = '';
+          renderFeatured();
+        } else {
+          try {
+            await fetchSelectedPerson(statePollController);
+          } catch (_) {
+            // Retain the last valid featured person while secondary data is unavailable.
+          }
+        }
+        try {
+          await loadOverview(statePollController);
+          if (showAllRecords) {
+            await ensureAllPeopleLoaded(statePollController);
+            renderGrid();
+          }
+        } catch (_) {
+          // Keep the last valid grid and race context during a partial outage.
+        }
+        if (forcedRefresh && previousSelectedId !== currentState.selected_person_id) renderFeatured();
+        updateViewControls();
+      } catch (_) {
+        noteStateFailure();
+      } finally {
+        statePollController = null;
+        refreshInFlight = false;
+        const nextDelay = statePollForceRequested ? 0 : (syncLost ? stateRetryDelayMs : STATE_POLL_INTERVAL_MS);
+        scheduleStatePoll(nextDelay);
+      }
+    }
+
+    function updateViewControls() {
+      toggleAllButtons.forEach(button => {
+        button.classList.toggle('active', showAllRecords);
+        button.textContent = showAllRecords ? 'Show Race Records Only' : 'Show All Records';
+      });
+      toggleRegionScopeButtons.forEach(button => {
+        button.style.display = showAllRecords ? 'inline-flex' : 'none';
+        button.classList.toggle('active', allPeopleScope === 'all');
+        button.textContent = allPeopleScope === 'all'
+          ? `Show ${currentRegion || 'Current'} Region Only`
+          : 'Show All Regions';
+      });
+    }
+
+    async function reconnectNow() {
+      statePollForceRequested = true;
+      if (statePollTimer) window.clearTimeout(statePollTimer);
+      if (refreshInFlight) {
+        statePollController?.abort();
+        return;
+      }
+      await refresh();
+    }
+
+    async function toggleAllRecords() {
+      showAllRecords = !showAllRecords;
+      if (showAllRecords) await ensureAllPeopleLoaded();
+      renderGrid();
+      renderSearchSuggestions();
+      updateViewControls();
+    }
+
+    async function toggleRegionScope() {
+      allPeopleScope = allPeopleScope === 'all' ? 'current' : 'all';
+      allPeopleLoaded = false;
+      if (showAllRecords) {
+        await ensureAllPeopleLoaded();
+        renderGrid();
+      }
+      renderSearchSuggestions();
+      updateViewControls();
+    }
+
+    toggleAllButtons.forEach(button => button.addEventListener('click', toggleAllRecords));
+    toggleRegionScopeButtons.forEach(button => button.addEventListener('click', toggleRegionScope));
+    operatorSearchToggle.addEventListener('click', () => {
+      operatorSearchPanel.classList.toggle('open');
+      if (operatorSearchPanel.classList.contains('open')) {
+        renderSearchSuggestions();
+        operatorSearchInput.focus();
+      }
+    });
+    operatorSearchInput.addEventListener('input', () => {
+      operatorSearchQuery = operatorSearchInput.value;
+      renderSearchSuggestions();
+      renderGrid();
+    });
+    syncReconnectButton.addEventListener('click', reconnectNow);
+    let wakeLockSentinel = null;
+    let wakeLockRequestPromise = null;
+    async function acquireWakeLockForFullscreen() {
+      if (!document.fullscreenElement || wakeLockSentinel || wakeLockRequestPromise || !navigator.wakeLock?.request) return;
+      wakeLockRequestPromise = (async () => {
+        try {
+          const sentinel = await navigator.wakeLock.request('screen');
+          if (!document.fullscreenElement) {
+            try { await sentinel.release(); } catch (_) {}
+            return;
+          }
+          wakeLockSentinel = sentinel;
+          sentinel.addEventListener('release', () => {
+            if (wakeLockSentinel === sentinel) wakeLockSentinel = null;
+          }, { once: true });
+        } catch (_) {
+          wakeLockSentinel = null;
+        }
+      })();
+      try { await wakeLockRequestPromise; } finally { wakeLockRequestPromise = null; }
+    }
+    async function releaseWakeLock() {
+      const sentinel = wakeLockSentinel;
+      wakeLockSentinel = null;
+      if (!sentinel) return;
+      try { await sentinel.release(); } catch (_) {}
+    }
+    async function syncWakeLockWithFullscreen() {
+      if (document.fullscreenElement) await acquireWakeLockForFullscreen();
+      else await releaseWakeLock();
+    }
+    function updateFullscreenControl() {
+      const fullscreen = Boolean(document.fullscreenElement);
+      fullscreenToggle.title = fullscreen ? 'Exit full screen' : 'Enter full screen';
+      fullscreenToggle.setAttribute('aria-label', fullscreenToggle.title);
+      fullscreenToggle.classList.toggle('active', fullscreen);
+    }
+    fullscreenToggle.addEventListener('click', async () => {
+      try {
+        if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+        else await document.exitFullscreen?.();
+      } catch (_) {
+        // Browsers can decline fullscreen without treating it as an app error.
+      } finally {
+        updateFullscreenControl();
+        syncWakeLockWithFullscreen();
+        window.setTimeout(updateFullscreenControl, 100);
+      }
+    });
+    document.addEventListener('fullscreenchange', () => {
+      updateFullscreenControl();
+      syncWakeLockWithFullscreen();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && document.fullscreenElement) acquireWakeLockForFullscreen();
+    });
+
+    async function bootstrap() {
+      await refresh();
+    }
+    bootstrap();
+    setInterval(updateSyncPresentation, 1000);
+  </script>
+</body>
+</html>
+
+
+

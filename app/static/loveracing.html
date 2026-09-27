@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>LOVERACING | Race Day People Intelligence</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#64707a; --line:rgba(58,73,84,.18); --accent:#9f3f24; --accent-dark:#7e2f1b; --green:#315f48; --blue:#2f4858; --paper:#fffaf2; --wash:#f6f1e7; --bg:#ecdfcf; --danger:#8f2f1d; --warn:#966515; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Georgia,"Times New Roman",serif; color:var(--ink); background:linear-gradient(135deg,var(--bg),var(--wash)); min-height:100vh; }
+    .page { width:min(1280px,100%); margin:0 auto; padding:18px; display:grid; gap:14px; }
+    .band { background:rgba(255,250,242,.94); border:1px solid var(--line); border-radius:8px; padding:14px; display:grid; gap:12px; min-width:0; }
+    .topbar,.nav,.row,.section-head,.status-strip,.candidate-head,.meeting-head,.run-head { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .topbar,.section-head,.candidate-head,.meeting-head,.run-head { justify-content:space-between; }
+    .topbar > div:first-child,.section-head > div:first-child { min-width:240px; }
+    .nav { justify-content:flex-start; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.14em; font-size:11px; color:var(--accent); margin-bottom:3px; }
+    h1,h2,h3,p { margin:0; }
+    h1 { font-size:26px; line-height:1.1; }
+    h2 { font-size:19px; line-height:1.2; }
+    h3 { font-size:16px; line-height:1.2; }
+    .subtle { color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+    button,.button-link,input,select { font:inherit; border-radius:8px; padding:9px 11px; border:1px solid var(--line); min-width:0; min-height:40px; }
+    input,select { background:white; width:100%; }
+    button,.button-link { background:#f1e5d3; color:var(--ink); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+    button.primary,.button-link.primary { background:var(--accent-dark); color:white; border-color:transparent; }
+    button.secondary,.button-link.secondary { background:var(--blue); color:white; border-color:transparent; }
+    button.danger { background:var(--danger); color:white; border-color:transparent; }
+    button.small { padding:6px 8px; font-size:13px; }
+    button:disabled { opacity:.58; cursor:not-allowed; }
+    label.switch { position:relative; display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:white; cursor:pointer; width:max-content; max-width:100%; }
+    label.switch.active { background:linear-gradient(180deg,var(--green),#214130); color:white; border-color:transparent; }
+    label.switch input { position:absolute; opacity:0; pointer-events:none; width:0; height:0; }
+    .status-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .metric,.candidate-card,.meeting-card,.run-card { border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.58); padding:10px; min-width:0; }
+    .run-note { grid-column:1 / -1; }
+    .metric strong { display:block; font-size:20px; }
+    .controls { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); gap:14px; align-items:start; }
+    .control-block { display:grid; gap:10px; align-content:start; padding:12px; border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.48); min-width:0; }
+    .form-grid { display:grid; grid-template-columns:minmax(260px,1fr) minmax(140px,170px) minmax(96px,auto) minmax(96px,auto); gap:8px; align-items:end; }
+    .manual-form { display:grid; grid-template-columns:minmax(0,1fr) minmax(140px,170px); gap:8px; align-items:end; }
+    .manual-form button { width:100%; }
+    .course-add-form { display:grid; grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(90px,.5fr) minmax(140px,.6fr) auto; gap:8px; align-items:end; }
+    .candidate-actions { display:grid; grid-template-columns:minmax(130px,1fr) auto auto auto; gap:8px; align-items:end; }
+    .candidate-grid,.meeting-grid,.run-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:10px; }
+    .chip-row { display:flex; flex-wrap:wrap; gap:6px; }
+    .chip { border:1px solid var(--line); border-radius:999px; padding:4px 7px; background:white; font-size:12px; color:var(--muted); }
+    .ok { color:var(--green); }
+    .bad { color:var(--danger); }
+    .warn { color:var(--warn); }
+    .course-table-wrap { overflow:auto; border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.55); }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { text-align:left; padding:8px 9px; border-bottom:1px solid rgba(58,73,84,.12); vertical-align:middle; }
+    th { color:var(--muted); font-weight:normal; }
+    tr:last-child td { border-bottom:none; }
+    td input,td select { width:100%; }
+    details { border:1px solid var(--line); border-radius:8px; padding:8px; background:rgba(255,255,255,.5); }
+    summary { cursor:pointer; font-weight:bold; }
+    .preview { display:grid; gap:10px; }
+    .race-preview { display:grid; gap:8px; margin-top:8px; }
+    .runner-table { max-height:280px; overflow:auto; border:1px solid var(--line); border-radius:8px; background:white; }
+    .empty { border:1px dashed var(--line); border-radius:8px; padding:12px; color:var(--muted); text-align:center; background:rgba(255,255,255,.5); }
+    .hidden { display:none; }
+    @media (max-width:1050px) { .controls,.status-strip { grid-template-columns:1fr 1fr; } .form-grid,.candidate-actions { grid-template-columns:1fr 1fr; } }
+    @media (max-width:700px) { .page { padding:10px; } .controls,.status-strip,.form-grid,.manual-form,.candidate-actions,.course-add-form { grid-template-columns:1fr; } button,.button-link,input,select { width:100%; } label.switch { width:100%; justify-content:center; } .nav { width:100%; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="band">
+      <div class="topbar">
+        <div>
+          <div class="eyebrow">LOVERACING</div>
+          <h1>Race-Day Auto Loader</h1>
+          <p class="subtle">Calendar discovery, preview, import scope, snapshots, and undo tools.</p>
+        </div>
+        <div class="nav">
+          <a class="button-link secondary" href="/">Viewer</a>
+          <a class="button-link" href="/settings">Settings</a>
+          <a class="button-link" href="/race-management">Race Management</a>
+          <a class="button-link primary" href="/loveracing">LOVERACING</a>
+          <a class="button-link" href="/help.html" aria-label="Help" title="Help">?</a>
+          <a class="button-link" href="/master-admin">Admin</a>
+        </div>
+      </div>
+      <div class="row">
+        <span class="chip" id="page-status">Loading status</span>
+        <button type="button" id="refresh-status">Refresh</button>
+      </div>
+      <div class="status-strip" id="status-strip"></div>
+    </section>
+
+    <section class="band controls">
+      <article class="control-block">
+        <div><div class="eyebrow">Automation</div><h2>Daily Calendar Policy</h2></div>
+        <div class="row">
+          <label class="switch"><input id="auto-check" type="checkbox"> Auto check calendar at 5:00 AM</label>
+          <label class="switch"><input id="auto-import" type="checkbox"> Auto import matched meetings</label>
+        </div>
+        <div class="row">
+          <button class="primary" type="button" id="calendar-check">Check Calendar Now</button>
+          <label class="switch"><input id="force-import" type="checkbox"> Force import when unchanged</label>
+        </div>
+        <p class="subtle" id="auto-status">Automation status is loading.</p>
+      </article>
+
+      <article class="control-block">
+        <div><div class="eyebrow">Manual</div><h2>Preview Then Import</h2></div>
+        <div class="manual-form">
+          <input id="manual-url" type="url" placeholder="https://loveracing.nz/RaceInfo/.../Meeting-Overview.aspx">
+          <select id="manual-region"></select>
+          <button type="button" id="manual-preview">Preview</button>
+          <button class="primary" type="button" id="manual-import">Import</button>
+        </div>
+        <p class="subtle" id="manual-status">Paste a meeting overview URL to inspect the parsed data before writing it.</p>
+      </article>
+    </section>
+
+    <section class="band">
+      <div class="section-head">
+        <div><div class="eyebrow">Calendar</div><h2>Next 7 Days</h2></div>
+        <p class="subtle" id="candidate-summary">Run a calendar check to refresh candidate meetings.</p>
+      </div>
+      <div class="candidate-grid" id="candidate-grid"></div>
+    </section>
+
+    <section class="band">
+      <div class="section-head">
+        <div><div class="eyebrow">Preview</div><h2>Parsed Meeting Data</h2></div>
+      </div>
+      <div class="preview" id="preview-panel">
+        <div class="empty">No preview loaded yet.</div>
+      </div>
+    </section>
+
+    <section class="band" id="courses">
+      <div class="section-head">
+        <div><div class="eyebrow">Import Scope</div><h2>Tagged Racecourses And Regions</h2></div>
+        <p class="subtle" id="course-summary">Loading courses.</p>
+      </div>
+      <div class="course-add-form">
+        <input id="new-course-name" type="text" placeholder="Course, e.g. Te Aroha">
+        <input id="new-course-loveracing" type="text" placeholder="LOVERACING match name">
+        <input id="new-course-code" type="text" placeholder="Code">
+        <select id="new-course-region"></select>
+        <button class="primary" type="button" id="add-course">Add Tagged Course</button>
+      </div>
+      <div class="course-table-wrap">
+        <table>
+          <thead>
+            <tr><th>Import</th><th>Course</th><th>LOVERACING match</th><th>Code</th><th>Region</th><th></th></tr>
+          </thead>
+          <tbody id="course-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="band">
+      <div class="section-head">
+        <div><div class="eyebrow">Imported</div><h2>Meetings In The System</h2></div>
+      </div>
+      <div class="meeting-grid" id="meeting-grid"></div>
+    </section>
+
+    <section class="band">
+      <div class="section-head">
+        <div><div class="eyebrow">Audit</div><h2>Recent Import Runs</h2></div>
+        <label class="switch"><input id="show-failed-details" type="checkbox"> Show failed history</label>
+      </div>
+      <div class="run-grid" id="run-grid"></div>
+    </section>
+  </main>
+
+  <script>
+    const pageStatus = document.getElementById("page-status");
+    const statusStrip = document.getElementById("status-strip");
+    const autoCheck = document.getElementById("auto-check");
+    const autoImport = document.getElementById("auto-import");
+    const autoStatus = document.getElementById("auto-status");
+    const forceImport = document.getElementById("force-import");
+    const manualUrl = document.getElementById("manual-url");
+    const manualRegion = document.getElementById("manual-region");
+    const manualStatus = document.getElementById("manual-status");
+    const manualImportButton = document.getElementById("manual-import");
+    const candidateSummary = document.getElementById("candidate-summary");
+    const candidateGrid = document.getElementById("candidate-grid");
+    const previewPanel = document.getElementById("preview-panel");
+    const courseSummary = document.getElementById("course-summary");
+    const courseBody = document.getElementById("course-body");
+    const newCourseName = document.getElementById("new-course-name");
+    const newCourseLoveracing = document.getElementById("new-course-loveracing");
+    const newCourseCode = document.getElementById("new-course-code");
+    const newCourseRegion = document.getElementById("new-course-region");
+    const meetingGrid = document.getElementById("meeting-grid");
+    const runGrid = document.getElementById("run-grid");
+    const showFailedDetails = document.getElementById("show-failed-details");
+    let latestStatus = null;
+    let latestCandidates = [];
+    let currentPreview = null;
+
+    function escapeText(value) {
+      return String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[char]));
+    }
+
+    function adminHeaders(extra = {}) {
+      return { "X-Admin-Pin": sessionStorage.getItem("peopleSystemAdminPin") || "", ...extra };
+    }
+
+    async function requireMasterPin(message = "Enter Master PIN to continue") {
+      const existing = sessionStorage.getItem("peopleSystemAdminPin") || "";
+      if (existing) {
+        const existingResponse = await fetch("/api/admin/master-check", { method: "POST", headers: { "X-Admin-Pin": existing } });
+        if (existingResponse.ok) return true;
+        sessionStorage.removeItem("peopleSystemAdminPin");
+      }
+      const pin = window.prompt(message);
+      if (!pin) return false;
+      const response = await fetch("/api/admin/master-check", { method: "POST", headers: { "X-Admin-Pin": pin } });
+      if (!response.ok) {
+        alert("That Master PIN was not accepted.");
+        return false;
+      }
+      sessionStorage.setItem("peopleSystemAdminPin", pin);
+      return true;
+    }
+
+    async function requireEditPin(message = "Enter Edit PIN to continue") {
+      const existing = sessionStorage.getItem("peopleSystemAdminPin") || "";
+      if (existing) {
+        const existingResponse = await fetch("/api/admin/edit-check", { method: "POST", headers: { "X-Admin-Pin": existing } });
+        if (existingResponse.ok) return true;
+        sessionStorage.removeItem("peopleSystemAdminPin");
+      }
+      const pin = window.prompt(message);
+      if (!pin) return false;
+      const response = await fetch("/api/admin/edit-check", { method: "POST", headers: { "X-Admin-Pin": pin } });
+      if (!response.ok) {
+        alert("That Edit PIN was not accepted.");
+        return false;
+      }
+      sessionStorage.setItem("peopleSystemAdminPin", pin);
+      return true;
+    }
+
+    function shortDate(value) {
+      if (!value) return "Date unknown";
+      return value;
+    }
+
+    function truncate(value, length = 180) {
+      const text = String(value || "");
+      return text.length > length ? `${text.slice(0, length)}...` : text;
+    }
+
+    function setStatus(text, ok = true) {
+      pageStatus.textContent = text;
+      pageStatus.classList.toggle("ok", ok);
+      pageStatus.classList.toggle("bad", !ok);
+    }
+
+    function refreshSwitchLabels() {
+      document.querySelectorAll("label.switch").forEach(label => {
+        const input = label.querySelector("input[type='checkbox']");
+        label.classList.toggle("active", Boolean(input?.checked));
+      });
+    }
+
+    function regions() {
+      return latestStatus?.allowed_regions || ["Northern", "Central", "Christchurch", "Dunedin"];
+    }
+
+    function renderRegions() {
+      const current = manualRegion.value || regions()[0];
+      manualRegion.innerHTML = regions().map(region => `<option value="${escapeText(region)}">${escapeText(region)}</option>`).join("");
+      manualRegion.value = regions().includes(current) ? current : regions()[0];
+      const courseCurrent = newCourseRegion.value || manualRegion.value || regions()[0];
+      newCourseRegion.innerHTML = regions().map(region => `<option value="${escapeText(region)}">${escapeText(region)}</option>`).join("");
+      newCourseRegion.value = regions().includes(courseCurrent) ? courseCurrent : regions()[0];
+    }
+
+    function statusClass(status) {
+      if (["ok", "ready", "unchanged"].includes(String(status || "").toLowerCase())) return "ok";
+      if (["problem", "parse_failed", "fetch_failed", "failed", "error", "abandoned", "cancelled", "postponed"].includes(String(status || "").toLowerCase())) return "bad";
+      if (["unmatched", "unassigned", "nominations", "undone", "backoff"].includes(String(status || "").toLowerCase())) return "warn";
+      return "";
+    }
+
+    function renderStatusStrip(data) {
+      const tagged = (data.racecourses || []).filter(course => course.active && course.is_local_tagged).length;
+      const okMeetings = (data.meetings || []).filter(meeting => meeting.import_status === "ok").length;
+      const candidates = data.calendar_candidates || [];
+      statusStrip.innerHTML = `
+        <div class="metric"><span class="subtle">Tagged courses</span><strong>${tagged}</strong></div>
+        <div class="metric"><span class="subtle">Calendar candidates</span><strong>${candidates.length}</strong></div>
+        <div class="metric"><span class="subtle">Imported meetings</span><strong>${okMeetings}</strong></div>
+        <div class="metric"><span class="subtle">Last check</span><strong style="font-size:14px">${escapeText(data.automation?.last_discovery_at || "Not run")}</strong></div>
+      `;
+    }
+
+    function renderAutomation(data) {
+      const automation = data.automation || {};
+      autoCheck.checked = Boolean(automation.check_enabled ?? automation.enabled);
+      autoImport.checked = Boolean(automation.import_enabled);
+      const lines = [
+        autoCheck.checked
+          ? `Calendar check is ON for ${automation.daily_check_time || "05:00"}. Auto import and race-day refreshes are ${autoImport.checked ? "ON" : "OFF"}.`
+          : "Calendar check is OFF. Manual preview and import still work.",
+      ];
+      if (automation.last_auto_attempt_at) lines.push(`Last auto attempt ${automation.last_auto_attempt_at}.`);
+      if (automation.last_auto_success_at) lines.push(`Last auto success ${automation.last_auto_success_at}.`);
+      if (automation.last_error) lines.push(`Last error ${automation.last_error}.`);
+      autoStatus.textContent = lines.join(" ");
+    }
+
+    function renderCourses(data) {
+      const courseRows = data.racecourses || [];
+      const tagged = courseRows.filter(course => course.active && course.is_local_tagged).length;
+      courseSummary.textContent = `${tagged} courses are tagged for matching. Each course can import into its own region.`;
+      courseBody.innerHTML = courseRows.length ? courseRows.map(course => `
+        <tr>
+          <td><label class="switch ${course.is_local_tagged ? "active" : ""}"><input type="checkbox" data-course-tag="${course.id}" ${course.is_local_tagged ? "checked" : ""}> Import</label></td>
+          <td><input type="text" data-course-name="${course.id}" value="${escapeText(course.name)}"></td>
+          <td><input type="text" data-course-loveracing="${course.id}" value="${escapeText(course.loveracing_name || "")}"></td>
+          <td><input type="text" data-course-code="${course.id}" value="${escapeText(course.short_code || "")}"></td>
+          <td><select data-course-region="${course.id}"><option value="" ${course.source_region ? "" : "selected"}>UNASSIGNED</option>${regions().map(region => `<option value="${escapeText(region)}" ${region === course.source_region ? "selected" : ""}>${escapeText(region)}</option>`).join("")}</select>${course.suggested_region ? `<div class="subtle">Evidence suggests ${escapeText(course.suggested_region)} (${course.evidence_count || 0} races); review before saving.</div>` : ""}</td>
+          <td><button class="small" type="button" data-save-course="${course.id}">Save</button></td>
+        </tr>
+      `).join("") : '<tr><td colspan="6"><div class="empty">No racecourses configured yet.</div></td></tr>';
+      courseBody.querySelectorAll("[data-course-tag]").forEach(input => input.addEventListener("change", () => saveCourse(input.dataset.courseTag)));
+      courseBody.querySelectorAll("[data-save-course]").forEach(button => button.addEventListener("click", () => saveCourse(button.dataset.saveCourse)));
+      refreshSwitchLabels();
+    }
+
+    function renderCandidates(candidates = []) {
+      latestCandidates = candidates;
+      candidateSummary.textContent = candidates.length
+        ? `${candidates.length} candidate meetings from the next 7 days. Preview before import when the system is still being checked.`
+        : "Run a calendar check to refresh candidate meetings.";
+      candidateGrid.innerHTML = candidates.length ? candidates.map((candidate, index) => `
+        <article class="candidate-card">
+          <div class="candidate-head">
+            <div>
+              <h3>${escapeText(candidate.meeting_name || candidate.label || "LOVERACING meeting")}</h3>
+              <p class="subtle">${shortDate(candidate.date)} · ${escapeText(candidate.venue_name || candidate.matched_course || "Location unknown")}</p>
+            </div>
+            <span class="chip ${statusClass(candidate.status)}">${escapeText(candidate.status || "unchecked")}</span>
+          </div>
+          <div class="chip-row">
+            <span class="chip">${candidate.race_count || 0} races</span>
+            <span class="chip">${candidate.runner_count || 0} runners</span>
+            <span class="chip">${candidate.matched_course ? `Matched ${escapeText(candidate.matched_course)}` : "Not matched"}</span>
+            ${candidate.is_matched && !candidate.is_assigned ? '<span class="chip warn">UNASSIGNED</span>' : ""}
+          </div>
+          ${candidate.error ? `<p class="subtle bad">${escapeText(truncate(candidate.error))}</p>` : ""}
+          ${(candidate.warnings || []).length ? `<p class="subtle warn">${escapeText((candidate.warnings || []).join(" | "))}</p>` : ""}
+          <div class="candidate-actions">
+            <select data-candidate-region="${index}"><option value="" ${candidate.region ? "" : "selected"}>UNASSIGNED</option>${regions().map(region => `<option value="${escapeText(region)}" ${region === candidate.region ? "selected" : ""}>${escapeText(region)}</option>`).join("")}</select>
+            ${candidate.is_assigned ? "" : `<button class="small" type="button" data-add-candidate="${index}">${candidate.is_matched ? "Assign Course" : "Add Course"}</button>`}
+            <button type="button" data-preview-candidate="${index}">Preview</button>
+            <button class="primary" type="button" data-import-candidate="${index}" ${candidate.status !== "ready" ? "disabled" : ""}>Import</button>
+          </div>
+          <p class="subtle">${escapeText(candidate.source_url)}</p>
+        </article>
+      `).join("") : '<div class="empty">No calendar candidates loaded yet.</div>';
+      candidateGrid.querySelectorAll("[data-preview-candidate]").forEach(button => {
+        button.addEventListener("click", () => previewUrl(candidates[Number(button.dataset.previewCandidate)].source_url, candidateRegion(button.dataset.previewCandidate)));
+      });
+      candidateGrid.querySelectorAll("[data-import-candidate]").forEach(button => {
+        button.addEventListener("click", () => importUrl(candidates[Number(button.dataset.importCandidate)].source_url, candidateRegion(button.dataset.importCandidate)));
+      });
+      candidateGrid.querySelectorAll("[data-add-candidate]").forEach(button => {
+        button.addEventListener("click", () => addCandidateCourse(Number(button.dataset.addCandidate)));
+      });
+    }
+
+    function candidateRegion(index) {
+      return candidateGrid.querySelector(`[data-candidate-region="${index}"]`)?.value || null;
+    }
+
+    function courseNameFromCandidate(candidate) {
+      if (candidate.venue_name) return candidate.venue_name;
+      if (candidate.meeting_name && candidate.meeting_name.includes("@")) return candidate.meeting_name.split("@").pop().trim();
+      return candidate.matched_course || candidate.label || "";
+    }
+
+    function renderPreview(preview) {
+      currentPreview = preview;
+      manualImportButton.disabled = preview?.importable === false;
+      if (!preview || preview.status === "failed" || preview.status === "problem") {
+        previewPanel.innerHTML = `<div class="empty bad">${escapeText(preview?.error || "No preview loaded yet.")}</div>`;
+        return;
+      }
+      previewPanel.innerHTML = `
+        <div class="candidate-card">
+          <div class="candidate-head">
+            <div>
+              <h3>${escapeText(preview.meeting_name || preview.venue_name || "LOVERACING meeting")}</h3>
+              <p class="subtle">${shortDate(preview.date)} · ${escapeText(preview.venue_name || "")} · ${escapeText(preview.region || "UNASSIGNED")}</p>
+            </div>
+            <div class="row">
+              <span class="chip ${statusClass(preview.status)}">${escapeText(preview.stage || preview.status || "fields")}</span>
+              <span class="chip ok">${preview.race_count || 0} races</span>
+              <span class="chip ok">${preview.runner_count || 0} runners</span>
+              ${preview.importable === false ? '<span class="chip warn">Waiting for Fields</span>' : '<button class="primary small" type="button" id="import-preview">Import This Preview</button>'}
+            </div>
+          </div>
+          ${(preview.warnings || []).length ? `<p class="subtle warn">Warnings: ${escapeText(preview.warnings.join(" | "))}</p>` : ""}
+          <p class="subtle">${escapeText(preview.source_url)}</p>
+        </div>
+        <div class="race-preview">
+          ${(preview.races || []).map(race => `
+            <details>
+              <summary>Race ${race.race_number} · ${escapeText(race.start_time || "")} · ${escapeText(race.race_name || "")} · ${race.runner_count || 0} runners</summary>
+              <p class="subtle">${escapeText(race.conditions || "")}${race.distance_m ? ` · ${race.distance_m}m` : ""}${race.stake_text ? ` · ${escapeText(race.stake_text)}` : ""}</p>
+              <div class="runner-table">
+                <table>
+                  <thead><tr><th>#</th><th>Horse</th><th>Barrier</th><th>Jockey</th><th>Trainer</th><th>Status</th></tr></thead>
+                  <tbody>
+                    ${(race.runners || []).map(runner => `
+                      <tr>
+                        <td>${escapeText(runner.runner_number || "")}</td>
+                        <td>${escapeText(runner.horse_name || "")}</td>
+                        <td>${escapeText(runner.barrier || "")}</td>
+                        <td>${escapeText(runner.jockey_name || "")}${runner.jockey_claim_text ? ` (${escapeText(runner.jockey_claim_text)})` : ""}</td>
+                        <td>${escapeText(runner.trainer_name || "")}</td>
+                        <td>${runner.is_scratched ? "SCR" : runner.is_ballot ? "Ballot" : escapeText(runner.status || "active")}</td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          `).join("")}
+        </div>
+      `;
+      document.getElementById("import-preview")?.addEventListener("click", () => importUrl(preview.source_url, preview.region || manualRegion.value));
+    }
+
+    function renderMeetings(meetings = []) {
+      meetingGrid.innerHTML = meetings.length ? meetings.map(meeting => `
+        <article class="meeting-card">
+          <div class="meeting-head">
+            <div>
+              <h3>${escapeText(meeting.meeting_name || meeting.venue_name || "LOVERACING meeting")}</h3>
+              <p class="subtle">${shortDate(meeting.date)} · <span class="${statusClass(meeting.import_status)}">${escapeText(meeting.import_status || "unknown")}</span> · ${meeting.race_count || 0} races</p>
+            </div>
+            <button class="danger small" type="button" data-undo="${meeting.id}">Undo Races</button>
+          </div>
+          <div class="chip-row">
+            ${meeting.loveracing_last_updated_at ? `<span class="chip">Updated ${escapeText(meeting.loveracing_last_updated_at)}</span>` : ""}
+            ${meeting.raw_html_path ? `<span class="chip">Snapshot saved</span>` : ""}
+          </div>
+          <details>
+            <summary>Details</summary>
+            <p class="subtle">${escapeText(meeting.source_url)}</p>
+            ${meeting.last_error ? `<p class="subtle bad">Last error: ${escapeText(truncate(meeting.last_error, 400))}</p>` : ""}
+            ${(meeting.warnings || []).length ? `<p class="subtle warn">Warnings: ${escapeText(meeting.warnings.join(" | "))}</p>` : ""}
+            ${meeting.raw_html_path ? `<p class="subtle">Snapshot: ${escapeText(meeting.raw_html_path)}</p>` : ""}
+          </details>
+        </article>
+      `).join("") : '<div class="empty">No LOVERACING meetings imported yet.</div>';
+      meetingGrid.querySelectorAll("[data-undo]").forEach(button => {
+        button.addEventListener("click", async () => {
+          if (!window.confirm("Remove LOVERACING-imported races and runners for this meeting? People and horses stay in the system.")) return;
+          if (!await requireMasterPin("Enter Master PIN to undo this LOVERACING import")) return;
+          await fetch(`/api/loveracing/meetings/${button.dataset.undo}/imported-races`, { method: "DELETE", headers: adminHeaders() });
+          await loadStatus();
+        });
+      });
+    }
+
+    function renderRuns(runs = []) {
+      let successSeen = false;
+      let hiddenHistoricalFailures = 0;
+      const visibleRuns = [];
+      runs.slice(0, 10).forEach(run => {
+        if (run.success) {
+          successSeen = true;
+          visibleRuns.push(run);
+          return;
+        }
+        if (!showFailedDetails.checked && successSeen) {
+          hiddenHistoricalFailures += 1;
+          return;
+        }
+        visibleRuns.push(run);
+      });
+      const hiddenNote = hiddenHistoricalFailures
+        ? `<div class="empty run-note">${hiddenHistoricalFailures} older failed ${hiddenHistoricalFailures === 1 ? "run is" : "runs are"} hidden because a later import succeeded. Turn on failed history to inspect them.</div>`
+        : "";
+      runGrid.innerHTML = visibleRuns.length || hiddenNote ? visibleRuns.map(run => `
+        <article class="run-card">
+          <div class="run-head">
+            <strong class="${run.success ? "ok" : "bad"}">${run.success ? "Success" : "Failed"}</strong>
+            <span class="subtle">${escapeText(run.started_at || "")} · HTTP ${escapeText(run.http_status || "-")}</span>
+          </div>
+          <p class="subtle">${run.races_found || 0} races, ${run.runners_found || 0} runners</p>
+          ${run.error_message ? `
+            <details ${showFailedDetails.checked ? "open" : ""}>
+              <summary>Error details</summary>
+              <p class="subtle bad">${escapeText(truncate(run.error_message, showFailedDetails.checked ? 1600 : 220))}</p>
+            </details>
+          ` : ""}
+        </article>
+      `).join("") + hiddenNote : '<div class="empty">No import runs yet.</div>';
+    }
+
+    function renderStatus(data) {
+      latestStatus = data;
+      renderRegions();
+      renderStatusStrip(data);
+      renderAutomation(data);
+      renderCandidates(data.calendar_candidates || []);
+      renderCourses(data);
+      renderMeetings(data.meetings || []);
+      renderRuns(data.recent_runs || []);
+      refreshSwitchLabels();
+      setStatus("Status loaded");
+    }
+
+    async function loadStatus() {
+      setStatus("Loading", true);
+      const response = await fetch("/api/loveracing/status");
+      if (!response.ok) {
+        setStatus("Could not load status", false);
+        return;
+      }
+      renderStatus(await response.json());
+    }
+
+    async function saveAutomation() {
+      if (!await requireEditPin("Enter Edit PIN to change LOVERACING automation")) {
+        await loadStatus();
+        return;
+      }
+      await fetch("/api/loveracing/automation", {
+        method: "PUT",
+        headers: adminHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ check_enabled: autoCheck.checked, import_enabled: autoImport.checked }),
+      });
+      await loadStatus();
+    }
+
+    async function runCalendarCheck() {
+      autoStatus.textContent = "Checking calendar and rematching courses only.";
+      const response = await fetch("/api/loveracing/discover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discovery_only: true }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        autoStatus.textContent = payload.detail || "Calendar check failed.";
+        setStatus("Calendar check failed", false);
+        return;
+      }
+      autoStatus.textContent = `${payload.candidate_count || 0} candidates, ${payload.matched_count || 0} safely assigned. No import attempted.`;
+      await loadStatus();
+    }
+
+    async function previewUrl(sourceUrl, region) {
+      if (!sourceUrl) {
+        manualStatus.textContent = "Enter a meeting overview URL first.";
+        return;
+      }
+      manualStatus.textContent = "Fetching preview.";
+      const response = await fetch("/api/loveracing/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source_url: sourceUrl, source_region: region }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.status === "failed" || payload.status === "problem") {
+        manualStatus.textContent = payload.detail || payload.error || "Preview failed.";
+        renderPreview(payload);
+        return;
+      }
+      manualUrl.value = sourceUrl;
+      manualRegion.value = region || manualRegion.value;
+      manualStatus.textContent = payload.stage === "nominations"
+        ? `Nominations preview: ${payload.race_count || 0} races, ${payload.runner_count || 0} horses. Waiting for Fields; live import is disabled.`
+        : `Preview ready: ${payload.race_count || 0} races, ${payload.runner_count || 0} runners.`;
+      renderPreview(payload);
+    }
+
+    async function importUrl(sourceUrl, region) {
+      if (!sourceUrl) {
+        manualStatus.textContent = "Enter or preview a meeting URL first.";
+        return;
+      }
+      if (!window.confirm("You are about to import LOVERACING race data into the live system. Check the preview, race count, runner count, warnings, and region before continuing.")) return;
+      manualStatus.textContent = "Importing meeting.";
+      const importPayload = { source_url: sourceUrl, source_region: region || manualRegion.value || null, force: forceImport.checked };
+      const sendImport = useEditPin => fetch("/api/loveracing/import", {
+          method: "POST",
+          headers: useEditPin ? adminHeaders({ "Content-Type": "application/json" }) : { "Content-Type": "application/json" },
+          body: JSON.stringify(importPayload),
+        });
+      let response = await sendImport(false);
+      if (response.status === 401) {
+        if (!await requireEditPin("Enter Edit PIN to establish or change this LOVERACING course assignment")) return;
+        response = await sendImport(true);
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        manualStatus.textContent = payload.detail?.message || payload.detail?.meeting?.last_error || "Import failed.";
+        setStatus("Import failed", false);
+        await loadStatus();
+        return;
+      }
+      manualStatus.textContent = `${payload.status}: ${payload.run?.races_found || payload.meeting?.race_count || 0} races imported.`;
+      await loadStatus();
+    }
+
+    async function saveCourse(id) {
+      if (!await requireEditPin("Enter Edit PIN to change LOVERACING racecourse import scope")) {
+        await loadStatus();
+        return;
+      }
+      const course = (latestStatus?.racecourses || []).find(item => String(item.id) === String(id)) || {};
+      const response = await fetch("/api/loveracing/racecourses", {
+        method: "PUT",
+        headers: adminHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          id: course.id,
+          name: courseBody.querySelector(`[data-course-name="${id}"]`)?.value || course.name,
+          loveracing_name: courseBody.querySelector(`[data-course-loveracing="${id}"]`)?.value || course.loveracing_name,
+          short_code: courseBody.querySelector(`[data-course-code="${id}"]`)?.value || course.short_code,
+          source_region: courseBody.querySelector(`[data-course-region="${id}"]`)?.value || null,
+          is_local_tagged: courseBody.querySelector(`[data-course-tag="${id}"]`)?.checked,
+          active: true,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.rematch?.status === "error") {
+        setStatus(result.detail || result.rematch?.error || "Course saved, but rematch failed", false);
+      }
+      await loadStatus();
+    }
+
+    async function createCourse(payload, message = "Tagged course added.") {
+      if (!await requireEditPin("Enter Edit PIN to add or assign a LOVERACING racecourse")) return false;
+      const response = await fetch("/api/loveracing/racecourses", {
+        method: "PUT",
+        headers: adminHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setStatus(result.detail || "Could not add course", false);
+        return false;
+      }
+      if (result.rematch?.status === "error") {
+        setStatus(result.rematch.error || "Course saved, but rematch failed", false);
+      } else {
+        setStatus(`${message} Calendar candidates rematched; no import attempted.`);
+      }
+      await loadStatus();
+      return result.rematch?.status !== "error";
+    }
+
+    async function saveNewCourse() {
+      const name = newCourseName.value.trim();
+      if (!name) {
+        setStatus("Enter a course name first", false);
+        newCourseName.focus();
+        return;
+      }
+      const added = await createCourse({
+        name,
+        loveracing_name: newCourseLoveracing.value.trim() || name,
+        short_code: newCourseCode.value.trim() || null,
+        source_region: newCourseRegion.value || regions()[0],
+        is_local_tagged: true,
+        active: true,
+      });
+      if (added) {
+        newCourseName.value = "";
+        newCourseLoveracing.value = "";
+        newCourseCode.value = "";
+      }
+    }
+
+    async function addCandidateCourse(index) {
+      const candidate = latestCandidates[index];
+      if (!candidate) return;
+      const name = courseNameFromCandidate(candidate);
+      if (!name) {
+        setStatus("Could not work out the course name", false);
+        return;
+      }
+      const region = candidateRegion(index);
+      if (!region) {
+        setStatus("Select a region before adding or assigning this course", false);
+        return;
+      }
+      const added = await createCourse({
+        name,
+        loveracing_name: name,
+        source_region: region,
+        is_local_tagged: true,
+        active: true,
+      }, `${name} added to import scope.`);
+      if (added) {
+        autoStatus.textContent = `${name} is assigned and candidates were rematched immediately. No import was attempted.`;
+      }
+    }
+
+    document.getElementById("refresh-status").addEventListener("click", loadStatus);
+    document.getElementById("calendar-check").addEventListener("click", runCalendarCheck);
+    document.getElementById("manual-preview").addEventListener("click", () => previewUrl(manualUrl.value.trim(), manualRegion.value));
+    document.getElementById("manual-import").addEventListener("click", () => importUrl(currentPreview?.source_url || manualUrl.value.trim(), currentPreview?.region || manualRegion.value));
+    autoCheck.addEventListener("change", saveAutomation);
+    autoImport.addEventListener("change", saveAutomation);
+    document.getElementById("add-course").addEventListener("click", saveNewCourse);
+    showFailedDetails.addEventListener("change", () => {
+      renderRuns(latestStatus?.recent_runs || []);
+      refreshSwitchLabels();
+    });
+    document.querySelectorAll("label.switch input[type='checkbox']").forEach(input => input.addEventListener("change", refreshSwitchLabels));
+    loadStatus();
+  </script>
+</body>
+</html>
+

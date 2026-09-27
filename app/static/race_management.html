@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>Race Management | Race Day People Intelligence</title>
+  <style>
+    :root { --ink:#1f2933; --muted:#6b7280; --line:rgba(120,98,69,.18); --accent:#b94b2a; --accent-dark:#8f351d; --button:#f1e5d3; --button-active:#315f48; --button-active-dark:#214130; --button-secondary:#2f4858; --bg-a:#ecdfcf; --bg-b:#f6f1e7; --panel:rgba(255,250,242,.95); --shadow:0 16px 38px rgba(50,34,16,.12); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Georgia,"Times New Roman",serif; color:var(--ink); background:linear-gradient(135deg,var(--bg-a) 0%,var(--bg-b) 100%); min-height:100vh; overflow-x:hidden; }
+    .page { width:min(1280px,100%); margin:0 auto; padding:18px; display:grid; gap:14px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; box-shadow:var(--shadow); padding:16px; display:grid; gap:12px; min-width:0; }
+    .topbar,.nav,.section-header,.track-row,.action-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+    .nav,.track-row,.action-row { justify-content:flex-start; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.16em; font-size:11px; color:var(--accent); margin-bottom:4px; }
+    h1,h2,h3,p { margin:0; }
+    h1 { font-size:24px; }
+    h2 { font-size:21px; }
+    h3 { font-size:17px; }
+    .subtle { color:var(--muted); font-size:13px; }
+    input,select,button,.button-link { font:inherit; border-radius:8px; padding:9px 11px; border:1px solid var(--line); min-height:40px; }
+    input,select { background:white; min-width:0; width:100%; }
+    button,.button-link { background:var(--button); color:var(--ink); cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; transition:transform .08s ease, filter .08s ease, box-shadow .08s ease; }
+    button:active,.button-link:active { transform:translateY(1px) scale(.98); filter:brightness(.92); box-shadow:inset 0 2px 8px rgba(0,0,0,.16); }
+    button.primary,.button-link.primary { background:var(--accent); color:white; border-color:transparent; }
+    button.secondary,.button-link.secondary { background:var(--button-secondary); color:white; border-color:transparent; }
+    button.danger { background:#7a2e2e; color:white; border-color:transparent; }
+    button.active { background:var(--accent-dark); color:white; border-color:transparent; }
+    .race-grid,.race-day-list,.manual-list,.silk-grid { display:grid; gap:12px; }
+    .race-card,.race-day-card,.manual-card { border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.62); padding:12px; display:grid; gap:10px; min-width:0; }
+    .race-day-card,.manual-card { word-break:break-word; }
+    .table-wrap { width:100%; overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; background:rgba(255,255,255,.7); border-radius:12px; overflow:hidden; min-width:520px; }
+    th,td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+    th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
+    .form-grid { display:grid; grid-template-columns:minmax(220px,1.4fr) minmax(150px,1fr) minmax(140px,.9fr) minmax(150px,.9fr) minmax(180px,1.2fr) auto; gap:10px; align-items:end; }
+    .field { display:grid; gap:6px; min-width:0; align-content:end; }
+    .field .eyebrow { margin-bottom:0; }
+    .note-field { grid-column:1 / -2; }
+    #add-manual { align-self:end; min-width:86px; }
+    .race-card header,.race-day-card header,.manual-card .section-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; }
+    .race-chip-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:8px; }
+    .race-chip { border:1px solid var(--line); border-radius:8px; padding:7px 8px; background:rgba(255,255,255,.65); display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; }
+    .race-chip span { min-width:0; overflow-wrap:anywhere; }
+    .race-chip button { padding:6px 8px; min-height:34px; }
+    .empty { border:1px dashed var(--line); border-radius:8px; padding:16px; color:var(--muted); text-align:center; background:rgba(255,255,255,.5); }
+    .silk-thumb { width:44px; height:34px; object-fit:contain; border:1px solid var(--line); border-radius:7px; background:rgba(255,255,255,.78); padding:4px; }
+    .silk-grid { grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
+    .silk-card { border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.62); padding:10px; display:grid; grid-template-columns:auto minmax(0,1fr); gap:9px; align-items:start; }
+    .manual-attendee-panel { display:none; }
+    .danger-details { border:1px solid rgba(122,46,46,.25); border-radius:8px; padding:10px; background:rgba(122,46,46,.06); }
+    .danger-details summary { cursor:pointer; color:#7a2e2e; font-weight:bold; }
+    @media (max-width:1050px) { .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .note-field { grid-column:1 / -1; } #add-manual { width:100%; } }
+    @media (max-width:700px) { .page { padding:10px; } .form-grid { grid-template-columns:1fr; } .topbar,.section-header { align-items:stretch; } button,.button-link { width:100%; } .nav { width:100%; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="panel">
+      <div class="topbar">
+        <div><div class="eyebrow">Race Management</div><h1>Imported Race Days</h1></div>
+        <div class="nav">
+          <a class="button-link secondary" href="/">Viewer</a>
+          <a class="button-link" href="/ingest">Image Ingest</a>
+          <a class="button-link" href="/records">Manage People</a>
+          <a class="button-link" href="/horses">Horses</a>
+          <a class="button-link" href="/race-ingest">Import Races</a>
+          <a class="button-link" href="/loveracing">LOVERACING</a>
+          <a class="button-link primary" href="/race-management">Race Management</a>
+          <a class="button-link" href="/help.html" aria-label="Help" title="Help">?</a>
+          <a class="button-link" href="/settings">Settings</a>
+        </div>
+      </div>
+      <p class="subtle">Use this page to inspect imported race days and runners. Manual attendee add/remove now lives in Settings. Cleanup and delete tools ask for the Master PIN when used.</p>
+    </section>
+
+    <section class="panel manual-attendee-panel">
+      <div><div class="eyebrow">Manual Attendees</div><h2>Add Someone To Pre-Race Or A Race</h2></div>
+      <div class="form-grid">
+        <label class="field"><span class="eyebrow">Person</span><input id="manual-person" list="people-list" placeholder="Start typing a name"></label>
+        <label class="field"><span class="eyebrow">Track</span><input id="manual-track" list="track-list" placeholder="Track"></label>
+        <label class="field"><span class="eyebrow">Date</span><input id="manual-date" type="date"></label>
+        <label class="field"><span class="eyebrow">Source Region</span><select id="manual-region"></select></label>
+        <label class="field"><span class="eyebrow">Scope</span><select id="manual-race"><option value="">Pre-race</option></select></label>
+        <button id="add-manual" class="primary" type="button">Add</button>
+        <label class="field note-field"><span class="eyebrow">Note</span><input id="manual-note" placeholder="Optional note, for example interview, track manager, or extra jockey"></label>
+      </div>
+      <datalist id="people-list"></datalist>
+      <datalist id="track-list"></datalist>
+      <div class="manual-list" id="manual-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+          <div><div class="eyebrow">Race Day Records</div><h2>Imported Race Days</h2></div>
+      </div>
+      <p class="subtle">Read-only by default. Open Master tools only when you deliberately need to remove imported race records.</p>
+      <details class="danger-details">
+        <summary>Master cleanup tools</summary>
+        <p class="subtle">This only removes imported race-day entries. It does not delete people, horses, images, roles, or notes.</p>
+        <div class="action-row"><button class="danger" type="button" id="cleanup-races">Delete Older Than 7 Days</button></div>
+      </details>
+      <div class="race-day-list" id="race-day-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-header">
+        <div><div class="eyebrow">Current Race Day</div><h2 id="meeting-title">No race day selected</h2></div>
+        <div class="track-row" id="track-row"></div>
+      </div>
+      <div class="race-grid" id="race-data"></div>
+    </section>
+
+    <section class="panel">
+      <div><div class="eyebrow">Silks</div><h2>Silk Catalog</h2></div>
+      <p class="subtle">Silks are captured from LOVERACING race fields. Hover a silk to see the official description where available.</p>
+      <div class="silk-grid" id="silk-catalog"></div>
+    </section>
+  </main>
+
+  <script>
+    const trackRow = document.getElementById("track-row");
+    const raceData = document.getElementById("race-data");
+    const meetingTitle = document.getElementById("meeting-title");
+    const raceDayList = document.getElementById("race-day-list");
+    const manualList = document.getElementById("manual-list");
+    const manualTrack = document.getElementById("manual-track");
+    const manualDate = document.getElementById("manual-date");
+    const manualRegion = document.getElementById("manual-region");
+    const manualRace = document.getElementById("manual-race");
+    const manualPerson = document.getElementById("manual-person");
+    const manualNote = document.getElementById("manual-note");
+    const silkCatalog = document.getElementById("silk-catalog");
+    let selectedTrack = null;
+    let latestRaceData = { races: [], tracks: [], race_date: null };
+    let peopleByName = new Map();
+    let allowedRegions = [];
+
+    function escapeText(value) {
+      return String(value || "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[char]));
+    }
+
+    function adminHeaders(extra = {}) {
+      return { "X-Admin-Pin": sessionStorage.getItem("peopleSystemAdminPin") || "", ...extra };
+    }
+
+    async function requireMasterPin() {
+      const existing = sessionStorage.getItem("peopleSystemAdminPin") || "";
+      if (existing) {
+        const existingResponse = await fetch("/api/admin/master-check", { method: "POST", headers: { "X-Admin-Pin": existing } });
+        if (existingResponse.ok) return true;
+        sessionStorage.removeItem("peopleSystemAdminPin");
+      }
+      const pin = window.prompt("Enter Master PIN to use this destructive race-management tool");
+      if (!pin) return false;
+      const response = await fetch("/api/admin/master-check", { method: "POST", headers: { "X-Admin-Pin": pin } });
+      if (!response.ok) {
+        alert("That Master PIN was not accepted.");
+        return false;
+      }
+      sessionStorage.setItem("peopleSystemAdminPin", pin);
+      return true;
+    }
+
+    function adminConfirmed(action) {
+      return window.confirm(action);
+    }
+
+    function renderTracks(data) {
+      selectedTrack = data.selected_track || selectedTrack;
+      manualTrack.value = selectedTrack || manualTrack.value;
+      manualDate.value = data.race_date || manualDate.value;
+      trackRow.innerHTML = (data.tracks || []).map(track => `<button class="${track === selectedTrack ? "active" : ""}" type="button" data-track="${escapeText(track)}">${escapeText(track)}</button>`).join("");
+      trackRow.querySelectorAll("[data-track]").forEach(button => {
+        button.addEventListener("click", () => { selectedTrack = button.dataset.track; loadRaceData(); });
+      });
+    }
+
+    function renderRaces(data) {
+      latestRaceData = data;
+      const fallbackLabel = data.is_fallback_day ? "Latest imported race day: " : "";
+      meetingTitle.textContent = selectedTrack ? `${fallbackLabel}${selectedTrack} races${data.race_date ? ` - ${data.race_date}` : ""}` : "No race day selected";
+      manualRace.innerHTML = '<option value="">Pre-race</option>' + (data.races || []).map(race => {
+        const parts = [`R${race.race_number}`];
+        if (race.start_time) parts.push(race.start_time);
+        if (race.race_name) parts.push(race.race_name);
+        return `<option value="${race.id}">${escapeText(parts.join(" · "))}</option>`;
+      }).join("");
+      if (!data.races.length) {
+        raceData.innerHTML = '<div class="empty">No imported races were found for the selected date.</div>';
+        return;
+      }
+      raceData.innerHTML = data.races.map(race => `
+        <article class="race-card">
+          <header>
+            <h3>R${race.race_number}${race.start_time ? ` · ${escapeText(race.start_time)}` : ""}</h3>
+            <span class="subtle">${race.entries.length} runners</span>
+          </header>
+          ${race.race_name ? `<div><strong>${escapeText(race.race_name)}</strong>${race.conditions ? `<div class="subtle">${escapeText(race.conditions)}</div>` : ""}</div>` : (race.conditions ? `<div class="subtle">${escapeText(race.conditions)}</div>` : "")}
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>No.</th><th>Silk</th><th>Horse</th><th>Jockey</th><th>Trainer</th></tr></thead>
+              <tbody>${race.entries.map(entry => `<tr><td>${entry.horse_number || "-"}</td><td>${entry.silk_image_url ? `<img class="silk-thumb" src="${escapeText(entry.silk_image_url)}" alt="Silk" title="${escapeText(entry.silk_description || 'Silk')}">` : "-"}</td><td>${escapeText(entry.horse_name)}${entry.is_scratched ? ' <span class="subtle">SCR</span>' : ''}</td><td>${escapeText(entry.jockey_name || "-")}</td><td>${escapeText(entry.trainer_name || "-")}</td></tr>`).join("")}</tbody>
+            </table>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderSilks(items) {
+      if (!items.length) {
+        silkCatalog.innerHTML = '<div class="empty">No silks have been captured yet. Re-import a LOVERACING meeting after the silk update is live.</div>';
+        return;
+      }
+      silkCatalog.innerHTML = items.map(item => `
+        <article class="silk-card">
+          <img class="silk-thumb" src="${escapeText(item.silk_image_url)}" alt="Silk" title="${escapeText(item.silk_description || 'Silk')}">
+          <div>
+            <strong>${escapeText(item.silk_description || 'Silk description unavailable')}</strong>
+            <p class="subtle">${escapeText((item.horses || []).slice(0, 4).join(', '))}${(item.horses || []).length > 4 ? ` +${item.horses.length - 4} more` : ''}</p>
+            <p class="subtle">${escapeText(item.last_seen_date || '')}</p>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderManualAttendees(items) {
+      if (!items.length) {
+        manualList.innerHTML = '<div class="empty">No manual attendees have been added for this race day.</div>';
+        return;
+      }
+      manualList.innerHTML = items.map(item => `
+        <article class="manual-card">
+          <div class="section-header">
+            <div><strong>${escapeText(item.person_name)}</strong><p class="subtle">${escapeText(item.track)} - ${escapeText(item.race_date)} - ${escapeText(item.race_label || "Pre-race")}${item.note ? ` - ${escapeText(item.note)}` : ""}</p></div>
+            <button class="danger" type="button" data-delete-manual="${item.id}">Delete</button>
+          </div>
+        </article>
+      `).join("");
+      manualList.querySelectorAll("[data-delete-manual]").forEach(button => {
+        button.addEventListener("click", async () => {
+          if (!adminConfirmed("Delete this manual attendee?")) return;
+          await fetch(`/api/races/manual-attendees/${button.dataset.deleteManual}`, { method: "DELETE", headers: adminHeaders() });
+          await loadManualAttendees();
+        });
+      });
+    }
+
+    function renderRaceDays(data) {
+      const days = data.race_days || [];
+      if (!days.length) {
+        raceDayList.innerHTML = '<div class="empty">No imported race days are stored yet.</div>';
+        return;
+      }
+      raceDayList.innerHTML = days.map(day => `
+        <article class="race-day-card">
+          <header class="section-header">
+            <div><h3>${escapeText(day.track)} - ${escapeText(day.date)}</h3><p class="subtle">${day.race_count} races, ${day.runner_count} runners</p></div>
+          </header>
+          <div class="race-chip-row">${day.races.map(race => {
+            const details = [`R${race.race_number}`];
+            if (race.start_time) details.push(race.start_time);
+            if (race.race_name) details.push(race.race_name);
+            return `<span class="race-chip"><span>${escapeText(details.join(" · "))}: ${race.runner_count} runners</span></span>`;
+          }).join("")}</div>
+          <details class="danger-details">
+            <summary>Master delete tools</summary>
+            <div class="race-chip-row">
+              <span class="race-chip"><span>Delete all imported races for this day</span><button class="danger" type="button" data-delete-day="${escapeText(day.track)}" data-date="${escapeText(day.date)}">Delete Day</button></span>
+              ${day.races.map(race => `<span class="race-chip"><span>Delete R${race.race_number}</span><button class="danger" type="button" data-delete-race="${race.id}">Delete Race</button></span>`).join("")}
+            </div>
+          </details>
+        </article>
+      `).join("");
+      raceDayList.querySelectorAll("[data-delete-day]").forEach(button => {
+        button.addEventListener("click", async () => {
+          if (!adminConfirmed(`Delete all imported races for ${button.dataset.deleteDay} on ${button.dataset.date}?`)) return;
+          if (!await requireMasterPin()) return;
+          await fetch(`/api/races/day?track=${encodeURIComponent(button.dataset.deleteDay)}&race_date=${encodeURIComponent(button.dataset.date)}`, { method: "DELETE", headers: adminHeaders() });
+          await refreshRaceManagement();
+        });
+      });
+      raceDayList.querySelectorAll("[data-delete-race]").forEach(button => {
+        button.addEventListener("click", async () => {
+          if (!adminConfirmed(`Delete imported race ID ${button.dataset.deleteRace}?`)) return;
+          if (!await requireMasterPin()) return;
+          await fetch(`/api/races/${button.dataset.deleteRace}`, { method: "DELETE", headers: adminHeaders() });
+          await refreshRaceManagement();
+        });
+      });
+    }
+
+    async function loadSuggestions() {
+      const response = await fetch("/api/suggestions");
+      if (!response.ok) return;
+      const data = await response.json();
+      peopleByName = new Map((data.people || []).map(name => [name.toLowerCase(), name]));
+      document.getElementById("people-list").innerHTML = (data.people || []).map(name => `<option value="${escapeText(name)}"></option>`).join("");
+      document.getElementById("track-list").innerHTML = (data.tracks || []).map(track => `<option value="${escapeText(track)}"></option>`).join("");
+      allowedRegions = data.regions || [];
+      manualRegion.innerHTML = allowedRegions.map(region => `<option value="${escapeText(region)}">${escapeText(region)}</option>`).join("");
+      if (data.default_region) manualRegion.value = data.default_region;
+    }
+
+    async function personIdByName(name) {
+      const response = await fetch(`/api/people/overview?search=${encodeURIComponent(name)}&region_scope=all`);
+      if (!response.ok) return null;
+      const people = (await response.json()).all_people || [];
+      const match = people.find(person => person.name.toLowerCase() === name.toLowerCase());
+      return match?.id || null;
+    }
+
+    async function loadRaceData() {
+      const params = new URLSearchParams();
+      if (selectedTrack) params.set("track", selectedTrack);
+      const response = await fetch(`/api/races/today${params.toString() ? `?${params}` : ""}`);
+      const data = await response.json();
+      renderTracks(data);
+      renderRaces(data);
+      await loadManualAttendees();
+    }
+
+    async function loadManualAttendees() {
+      const params = new URLSearchParams();
+      if (manualTrack.value) params.set("track", manualTrack.value);
+      if (manualDate.value) params.set("race_date", manualDate.value);
+      const response = await fetch(`/api/races/manual-attendees${params.toString() ? `?${params}` : ""}`);
+      renderManualAttendees(response.ok ? await response.json() : []);
+    }
+
+    async function loadRaceDays() {
+      const response = await fetch("/api/races/days");
+      renderRaceDays(await response.json());
+    }
+
+    async function loadSilks() {
+      const response = await fetch("/api/races/silks");
+      if (!response.ok) return;
+      renderSilks((await response.json()).silks || []);
+    }
+
+    async function refreshRaceManagement() {
+      await loadRaceData();
+      await loadRaceDays();
+      await loadSilks();
+    }
+
+    document.getElementById("add-manual").addEventListener("click", async () => {
+      const canonicalName = peopleByName.get(manualPerson.value.toLowerCase()) || manualPerson.value;
+      const personId = await personIdByName(canonicalName);
+      if (!personId) { alert("Person not found. Add them in Manage People or Image Ingest first."); return; }
+      if (!manualTrack.value || !manualDate.value) { alert("Track and date are required."); return; }
+      const payload = {
+        person_id: personId,
+        track: manualTrack.value,
+        race_date: manualDate.value,
+        race_id: manualRace.value ? Number(manualRace.value) : null,
+        note: manualNote.value || null,
+        source_region: manualRegion.value || null,
+      };
+      const response = await fetch("/api/races/manual-attendees", { method: "POST", headers: adminHeaders({ "Content-Type": "application/json" }), body: JSON.stringify(payload) });
+      if (!response.ok) {
+        let message = "This manual attendee could not be added.";
+        try {
+          const error = await response.json();
+          message = error.detail || message;
+        } catch (_) {}
+        alert(message);
+        return;
+      }
+      manualPerson.value = "";
+      manualNote.value = "";
+      await loadManualAttendees();
+    });
+
+    document.getElementById("cleanup-races").addEventListener("click", async () => {
+      if (!adminConfirmed("Delete imported race records older than 7 days?")) return;
+      if (!await requireMasterPin()) return;
+      await fetch("/api/races/cleanup?retention_days=7", { method: "POST", headers: adminHeaders() });
+      await refreshRaceManagement();
+    });
+
+    manualTrack.addEventListener("change", loadManualAttendees);
+    manualDate.addEventListener("change", loadManualAttendees);
+    loadSuggestions().then(refreshRaceManagement);
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,31 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Python and test artifacts
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Runtime data, uploaded media, backups, and saved source snapshots
+app/images/
+app/pending_images/
+app/backups/
+app/loveracing_snapshots/
+app/help/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.log
+*.zip
+
+# Generated exports and local tooling
+people_without_photos_*.csv
+profile_image_download_manifest_*.csv
+node_modules/
+.git-unusable-*/

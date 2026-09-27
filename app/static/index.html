@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="/static/ui_helpers.js?v=8" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/static/people%20finder%20icon.png">
+  <title>Race Day People Intelligence</title>
+  <style>
+    :root {
+      --panel: rgba(255, 250, 242, 0.92);
+      --ink: #1f2933;
+      --muted: #6b7280;
+      --line: rgba(120, 98, 69, 0.18);
+      --accent: #b94b2a;
+      --accent-dark: #8f351d;
+      --button: #f1e5d3;
+      --button-active: #315f48;
+      --button-active-dark: #214130;
+      --button-secondary: #2f4858;
+      --bg-a: #e9dfcc;
+      --bg-b: #f4efe5;
+      --shadow: 0 14px 34px rgba(50, 34, 16, 0.10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.72), transparent 35%),
+        linear-gradient(135deg, var(--bg-a) 0%, var(--bg-b) 48%, var(--bg-a) 100%);
+      min-height: 100vh;
+    }
+    body.sync-lost::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      border: 3px solid #c92a2a;
+      pointer-events: none;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 250px;
+      gap: 14px;
+      padding: 14px;
+    }
+    .layout.large-side { grid-template-columns: minmax(0, 1fr) var(--quick-look-large-width, 400px); }
+    .layout.no-side { grid-template-columns: minmax(0, 1fr); }
+    .layout.no-side .side-panel { display: none; }
+    .main-column { display: flex; flex-direction: column; gap: 12px; }
+    .hero, .panel, .side-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .hero, .section, .side-panel { padding: 12px; }
+    .section { display: grid; gap: 10px; }
+    .hero { display: grid; gap: 9px; }
+    .brand-mark { display:flex; align-items:center; gap:9px; min-width:0; }
+    .brand-logo { width:34px; height:34px; border-radius:10px; object-fit:cover; box-shadow:0 6px 14px rgba(50,34,16,.16); }
+    .hero-top, .section-header, .toolbar, .race-toolbar, .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .hero-top, .section-header { justify-content: space-between; }
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 10px;
+      color: var(--accent);
+      margin-bottom: 3px;
+    }
+    h1, h2, h3, p { margin: 0; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 15px; }
+    .subtle { color: var(--muted); font-size: 13px; }
+    input, button, .button-link {
+      font: inherit;
+      font-size: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+    }
+    input { background: rgba(255,255,255,0.86); min-width: 260px; flex: 1; }
+    button, .button-link {
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), var(--button));
+      color: var(--ink);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      transition: transform .08s ease, filter .08s ease, box-shadow .08s ease;
+    }
+    button:active, .button-link:active { transform: translateY(1px) scale(.98); filter: brightness(.92); box-shadow: inset 0 2px 8px rgba(0,0,0,.16); }
+    .button-link.primary {
+      background: linear-gradient(180deg, var(--accent), var(--accent-dark));
+      color: white;
+      border-color: transparent;
+    }
+    button.active { background: linear-gradient(180deg, var(--button-active), var(--button-active-dark)); color: white; border-color: transparent; }
+    .toolbar .button-link { background: linear-gradient(180deg, var(--button-active), var(--button-active-dark)); color: white; border-color: rgba(255,255,255,0.2); }
+    .toolbar .button-link[aria-label="Settings"] { min-width: 42px; font-size: 18px; padding: 5px 11px; }
+    .toolbar .icon-button { min-width: 42px; font-size: 16px; padding: 5px 11px; }
+    .toolbar .icon-button.muted { background: rgba(255,255,255,0.55); color: var(--muted); }
+    .pill {
+      background: rgba(255,255,255,0.68);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .race-meta-group { display:flex; align-items:center; gap:6px; min-width:0; }
+    .sync-status {
+      min-height: 26px;
+      padding: 4px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(255,255,255,.55);
+    }
+    .sync-status .sync-dot { width:8px; height:8px; border-radius:50%; background:#2f9e44; display:block; flex:0 0 auto; }
+    .sync-status .sync-label { display:none; }
+    .sync-status.sync-lost { color:#a61e1e; border-color:rgba(201,42,42,.45); background:rgba(255,235,235,.78); }
+    .sync-status.sync-lost .sync-dot { background:#c92a2a; }
+    .sync-status.sync-lost .sync-label { display:inline; }
+    .compact-action { min-width:34px; padding:5px 8px; font-size:16px; }
+    .warning-pill { border-color: rgba(143,47,29,.35); color: #8f2f1d; }
+    .location-menu { position: relative; }
+    .location-menu summary {
+      list-style: none;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.86);
+      padding: 8px 10px;
+      min-width: 150px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .location-menu summary::-webkit-details-marker { display: none; }
+    .location-options {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      z-index: 20;
+      min-width: 220px;
+      max-height: 250px;
+      overflow: auto;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      display: grid;
+      gap: 7px;
+    }
+    .location-options label { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+    .location-options input { min-width: 0; width: auto; flex: 0; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+      gap: 10px;
+    }
+    .card {
+      position: relative;
+      overflow: hidden;
+      min-height: 178px;
+      border-radius: 15px;
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, #d8c5ab, #efe3d1);
+      cursor: pointer;
+      display: flex;
+      align-items: flex-end;
+      padding: 10px;
+    }
+    .card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: transparent; }
+    .card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,18,16,0) 28%, rgba(20, 18, 16, 0.9)); pointer-events: none; }
+    .card.selected-person { outline: 4px solid #2f9e44; outline-offset: 2px; }
+    .card.operator-highlight { outline: 4px solid #f08c00; outline-offset: 2px; }
+    .quick-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .quick-title-row button { width: auto; min-width: 40px; padding: 8px 10px; }
+    .card-content { position: relative; z-index: 1; color: white; display: grid; gap: 6px; width: 100%; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .chip {
+      background: rgba(255,255,255,0.14);
+      color: inherit;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+    .chip.review-chip {
+      background: rgba(255, 193, 7, 0.2);
+      border-color: rgba(255, 193, 7, 0.55);
+    }
+    .side-panel {
+      position: sticky;
+      top: 14px;
+      height: fit-content;
+      max-height: calc(100vh - 28px);
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+    .side-panel.empty-state { padding: 10px; }
+    .selected-image {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 14px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #d8c5ab, #efe3d1);
+      border: 1px solid var(--line);
+    }
+    .meta-card, .empty {
+      background: rgba(255,255,255,0.55);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .meta-card { display: grid; gap: 9px; }
+    .silk-block { display:grid; gap:6px; }
+    .silk-image { width:100%; max-height:120px; object-fit:contain; border-radius:12px; border:1px solid var(--line); background:rgba(255,255,255,.68); padding:8px; }
+    .race-context { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
+    .race-context-item { background: rgba(255,255,255,0.55); border: 1px solid var(--line); border-radius: 12px; padding: 8px; font-size: 13px; display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px; align-items:center; }
+    .race-context-item.no-silk { grid-template-columns:1fr; }
+    .race-context-copy { min-width:0; display:grid; gap:3px; }
+    .race-associations { color:var(--muted); font-size:12px; line-height:1.35; }
+    .race-associations span { display:block; overflow-wrap:anywhere; }
+    .race-silk-thumb { width:38px; height:30px; object-fit:contain; border-radius:6px; border:1px solid var(--line); background:rgba(255,255,255,.78); padding:3px; }
+    .race-context-item.scratched { opacity: .72; border-color: rgba(143,47,29,.32); }
+    .race-status-chip {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 6px;
+      border-radius: 999px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(143,47,29,.12);
+      color: #8f2f1d;
+      border: 1px solid rgba(143,47,29,.22);
+      vertical-align: middle;
+    }
+    .horse-number-strip { display:flex; flex-wrap:wrap; gap:4px; align-items:flex-start; min-height:0; }
+    .horse-number-strip:empty { display:none; }
+    .focus-header { justify-content:flex-start; align-items:center; column-gap:10px; row-gap:6px; }
+    .focus-heading { flex:0 0 auto; }
+    .focus-header .horse-number-strip { flex:1 1 360px; }
+    .focus-header #focus-count { margin-left:auto; white-space:nowrap; }
+    .horse-number-control { display:inline-flex; align-items:center; justify-content:center; min-width:30px; min-height:28px; padding:3px 7px; border:1px solid var(--line); border-radius:8px; background:linear-gradient(180deg, rgba(255,255,255,.96), var(--button)); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:12px; font-weight:700; font-variant-numeric:lining-nums tabular-nums; font-feature-settings:"lnum" 1,"tnum" 1; line-height:1; }
+    .horse-number-control[aria-disabled="true"] { cursor:not-allowed; }
+    .horse-number-control.scratched { color:#8f2f1d; border-color:rgba(143,47,29,.38); text-decoration:line-through; opacity:.75; }
+    .horse-number-choice { position:relative; }
+    .horse-number-choice summary { list-style:none; cursor:pointer; }
+    .horse-number-choice summary::-webkit-details-marker { display:none; }
+    .horse-number-choices { position:absolute; z-index:25; top:calc(100% + 4px); left:0; min-width:170px; display:grid; gap:4px; padding:6px; border:1px solid var(--line); border-radius:10px; background:var(--panel); box-shadow:var(--shadow); }
+    .horse-number-choices button { justify-content:flex-start; min-height:30px; padding:5px 7px; font-size:12px; white-space:normal; text-align:left; }
+    .person-link { display:inline; min-height:0; padding:0; border:0; border-radius:0; background:none; color:var(--button-active); font:inherit; font-weight:700; text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:2px; }
+    .person-link:active { transform:none; box-shadow:none; }
+    .horse-associates { border-top:1px solid var(--line); padding-top:7px; }
+    .horse-associates summary { cursor:pointer; color:var(--button-active); font-size:12px; font-weight:700; }
+    .horse-associates-content { display:grid; gap:7px; padding-top:7px; }
+    .horse-associate-group { display:grid; gap:4px; }
+    .horse-associate-group + .horse-associate-group { border-top:1px solid var(--line); padding-top:6px; }
+    .horse-associate-row { display:grid; grid-template-columns:minmax(62px,auto) minmax(0,1fr); gap:6px; font-size:12px; align-items:baseline; }
+    .horse-associate-role { color:var(--muted); }
+    .empty { color: var(--muted); text-align: center; font-size: 13px; }
+    @media (max-width: 1050px) {
+      .layout { grid-template-columns: 1fr; }
+      .side-panel { position: static; max-height: none; }
+    }
+    @media (max-width: 600px) {
+      .layout { padding: 10px; }
+      input, button, .button-link { width: 100%; }
+      .toolbar .compact-action, .race-meta-group .sync-status { width:auto; }
+      .horse-number-strip button, .horse-number-choices button, .person-link { width:auto; }
+      .location-menu, .location-menu summary { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout" id="layout">
+    <main class="main-column">
+      <section class="hero">
+        <div class="hero-top">
+          <div class="brand-mark">
+            <img class="brand-logo" src="/static/people%20finder%20icon.png" alt="People Finder">
+            <div class="eyebrow" id="brand-title">Race Day People Intelligence</div>
+          </div>
+          <div class="race-meta-group">
+            <button class="sync-status" id="sync-reconnect" type="button" title="Refresh shared state" aria-label="Refresh shared state"><span class="sync-dot"></span><span class="sync-label">Sync lost</span></button>
+            <div class="pill" id="race-meta">No meeting loaded yet</div>
+          </div>
+        </div>
+        <div class="toolbar">
+          <a class="button-link" href="/operator" data-help="Open the operator page so the team can follow the main viewer and choose an orange-highlighted tile.">Operator</a>
+          <a class="button-link" href="/help.html" aria-label="Help" title="Help" data-help="Open the public help guide.">?</a>
+          <a class="button-link" href="/settings" aria-label="Settings" data-help="Open settings, themes, date override, and race-day convenience tools.">&#9881;</a>
+          <button id="fullscreen-toggle" class="icon-button muted compact-action" type="button" aria-label="Enter full screen" title="Enter full screen">⛶</button>
+          <button id="image-visibility-toggle" class="icon-button muted" type="button" aria-label="Toggle people without images" data-help="Show or hide people who do not have an image yet.">◐</button>
+          <button id="auto-race-toggle" type="button" data-help="Toggle automatic race following based on LOVERACING start times.">AUTO: OFF</button>
+          <input id="search" type="search" placeholder="Search name, alias, or stable" data-help="Filter visible people by name, alias, or stable.">
+        </div>
+        <div class="race-toolbar" id="race-toolbar"></div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-header focus-header">
+          <div class="focus-heading">
+            <div class="eyebrow" id="focus-eyebrow">Current Focus</div>
+            <h2 id="focus-title">Current View</h2>
+            <div class="subtle" id="focus-note"></div>
+          </div>
+          <div class="horse-number-strip" id="horse-number-strip" aria-label="Selected race horse numbers"></div>
+          <span class="subtle" id="focus-count">0 people</span>
+        </div>
+        <div class="grid" id="focus-grid"></div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-header">
+          <div><div class="eyebrow">People Roster</div><h2>All People</h2></div>
+          <div class="filter-row" id="roster-filters">
+            <button class="active" type="button" id="region-current-btn">Current Region</button>
+            <button type="button" id="region-all-btn">All Regions</button>
+            <button class="active" type="button" data-role-filter="all">All</button>
+            <button type="button" data-role-filter="jockey">Jockeys</button>
+            <button type="button" data-role-filter="trainer">Trainers</button>
+            <button type="button" data-role-filter="staff">Staff</button>
+            <button type="button" data-role-filter="presenter">Presenters</button>
+            <details class="location-menu" id="location-menu">
+              <summary id="location-summary">All photo locations</summary>
+              <div class="location-options" id="location-options"></div>
+            </details>
+            <span class="subtle" id="all-count">0 records</span>
+          </div>
+        </div>
+        <div class="grid" id="all-grid"></div>
+      </section>
+    </main>
+
+    <aside class="side-panel empty-state" id="detail-shell">
+      <section class="meta-card">
+          <div class="quick-title-row"><div><div class="eyebrow">Selected Person</div><h3>Quick Look</h3></div><button id="quick-look-size-btn" type="button">+</button></div>
+          <div class="empty">Select a person to open the quick-look panel.</div>
+      </section>
+    </aside>
+  </div>
+
+  <script>
+    const focusGrid = document.getElementById("focus-grid");
+    const allGrid = document.getElementById("all-grid");
+    const raceMeta = document.getElementById("race-meta");
+    const focusCount = document.getElementById("focus-count");
+    const focusNote = document.getElementById("focus-note");
+    const horseNumberStrip = document.getElementById("horse-number-strip");
+    const allCount = document.getElementById("all-count");
+    const searchInput = document.getElementById("search");
+    const detailShell = document.getElementById("detail-shell");
+    const raceToolbar = document.getElementById("race-toolbar");
+    const autoRaceToggle = document.getElementById("auto-race-toggle");
+    const imageVisibilityToggle = document.getElementById("image-visibility-toggle");
+    const brandTitle = document.getElementById("brand-title");
+    const focusEyebrow = document.getElementById("focus-eyebrow");
+    const focusTitle = document.getElementById("focus-title");
+    const rosterFilters = document.getElementById("roster-filters");
+    const regionCurrentButton = document.getElementById("region-current-btn");
+    const regionAllButton = document.getElementById("region-all-btn");
+    const locationMenu = document.getElementById("location-menu");
+    const locationSummary = document.getElementById("location-summary");
+    const locationOptions = document.getElementById("location-options");
+    const layout = document.getElementById("layout");
+    const syncReconnectButton = document.getElementById("sync-reconnect");
+    const fullscreenToggle = document.getElementById("fullscreen-toggle");
+
+    const settings = JSON.parse(localStorage.getItem("peopleSystemSettings") || "{}");
+    const theme = settings.theme || {};
+    Object.entries(theme).forEach(([key, value]) => {
+      if (value) document.documentElement.style.setProperty(`--${key}`, value);
+    });
+    const hoverHelp = settings.hoverHelp !== false;
+    document.querySelectorAll("[data-help]").forEach(element => {
+      if (hoverHelp) element.setAttribute("title", element.dataset.help);
+      else element.removeAttribute("title");
+    });
+
+    function nzTodayKey() {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Auckland", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    }
+
+    function clearStaleRaceDateOverride() {
+      const todayKey = nzTodayKey();
+      if (settings.raceDateOverride && settings.raceDateOverrideSetOn !== todayKey) {
+        settings.raceDateOverride = "";
+        settings.raceDateOverrideSetOn = "";
+        localStorage.setItem("peopleSystemSettings", JSON.stringify(settings));
+      }
+    }
+    clearStaleRaceDateOverride();
+
+    let selectedPersonId = null;
+    let selectedRaceId = null;
+    let selectedTrack = null;
+    let selectedRaceDate = null;
+    let preMode = true;
+    let selectedRoles = new Set();
+    let showPeopleWithoutImages = false;
+    let imagesOnly = true;
+    let showSidePanel = settings.showSidePanel !== false;
+    let largeQuickLook = settings.largeQuickLook === true;
+    const savedQuickLookBoost = Number(settings.quickLookBoostPercent);
+    let quickLookBoostPercent = Math.max(0, Math.min(500, Number.isFinite(savedQuickLookBoost) ? savedQuickLookBoost : 60));
+    let raceDateOverride = settings.raceDateOverride || "";
+    let autoRaceMode = settings.autoRaceMode === true;
+    let selectedLocations = new Set();
+    let lastOverview = null;
+    const horseAssociateCache = new Map();
+    let operatorHighlightPersonId = null;
+    let detailRequestId = 0;
+    let lastPublishedStateKey = "";
+    let regionScope = "current";
+    const AUTO_RACE_LEAD_MINUTES = 15;
+    const STATE_POLL_INTERVAL_MS = 1500;
+    const STATE_REQUEST_TIMEOUT_MS = 8000;
+    const SYNC_LOST_AFTER_MS = 15000;
+    const STATE_RETRY_MAX_MS = 10000;
+    let statePollTimer = null;
+    let statePollInFlight = false;
+    let statePollController = null;
+    let statePollForceRequested = false;
+    let stateMonitoringStartedAt = Date.now();
+    let lastStateSuccessAt = 0;
+    let stateRetryDelayMs = STATE_POLL_INTERVAL_MS;
+    let syncLost = false;
+    let lastStateRuntimeId = null;
+    let needsAuthoritativeReconcile = false;
+
+    async function loadInstanceBranding() {
+      try {
+        const response = await fetch("/api/admin/instance");
+        if (!response.ok) return;
+        const info = await response.json();
+        const instanceName = (info.instance_name || "").trim();
+        if (!instanceName) return;
+        brandTitle.textContent = `${instanceName} Race Day People Intelligence`;
+        document.title = `${instanceName} Race Day People Intelligence`;
+      } catch (_) {}
+    }
+
+    function saveViewerSettings() {
+      localStorage.setItem("peopleSystemSettings", JSON.stringify({ ...settings, showSidePanel, largeQuickLook, quickLookBoostPercent, raceDateOverride, raceDateOverrideSetOn: raceDateOverride ? nzTodayKey() : "", autoRaceMode, autoRacePaused: false, theme }));
+    }
+
+    function updateImageVisibilityToggle() {
+      imageVisibilityToggle.classList.toggle("active", showPeopleWithoutImages);
+      imageVisibilityToggle.classList.toggle("muted", !showPeopleWithoutImages);
+      imageVisibilityToggle.textContent = showPeopleWithoutImages ? "◉" : "◐";
+      imageVisibilityToggle.title = showPeopleWithoutImages
+        ? "People without images are visible"
+        : "People without images are hidden";
+    }
+
+    async function loadViewerPreferences() {
+      try {
+        const response = await fetch("/api/viewer-state/preferences");
+        if (!response.ok) return;
+        const prefs = await response.json();
+        showPeopleWithoutImages = Boolean(prefs.show_people_without_images);
+        imagesOnly = !showPeopleWithoutImages;
+        updateImageVisibilityToggle();
+      } catch (_) {
+        updateImageVisibilityToggle();
+      }
+    }
+
+    async function saveImageVisibilityPreference() {
+      showPeopleWithoutImages = !showPeopleWithoutImages;
+      imagesOnly = !showPeopleWithoutImages;
+      updateImageVisibilityToggle();
+      try {
+        const response = await fetch("/api/viewer-state/preferences", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ show_people_without_images: showPeopleWithoutImages }),
+        });
+        if (response.ok) {
+          const prefs = await response.json();
+          showPeopleWithoutImages = Boolean(prefs.show_people_without_images);
+          imagesOnly = !showPeopleWithoutImages;
+          updateImageVisibilityToggle();
+        }
+      } catch (_) {}
+      if (lastOverview) await loadOverview(searchInput.value);
+    }
+
+    function quickLookSizeButtonMarkup() {
+      return `<button id="quick-look-size-btn" type="button" aria-label="Toggle quick-look panel size">${largeQuickLook ? "-" : "+"}</button>`;
+    }
+
+    function wireQuickLookSizeButton() {
+      const button = document.getElementById("quick-look-size-btn");
+      if (!button) return;
+      button.classList.toggle("active", largeQuickLook);
+      button.textContent = largeQuickLook ? "-" : "+";
+      button.title = largeQuickLook ? "Return quick-look panel to normal size" : `Make quick-look panel ${quickLookBoostPercent}% wider`;
+      button.onclick = () => {
+        largeQuickLook = !largeQuickLook;
+        applyQuickLookSize();
+        saveViewerSettings();
+      };
+    }
+
+    function renderEmptyQuickLook() {
+      detailShell.classList.add("empty-state");
+      detailShell.innerHTML = `<section class="meta-card"><div class="quick-title-row"><div><div class="eyebrow">Selected Person</div><h3>Quick Look</h3></div>${quickLookSizeButtonMarkup()}</div><div class="empty">Select a person to open the quick-look panel.</div></section>`;
+      wireQuickLookSizeButton();
+    }
+
+    function applyQuickLookSize() {
+      const scaledBoost = quickLookBoostPercent * 1.8;
+      document.documentElement.style.setProperty("--quick-look-large-width", `${Math.round(250 * (1 + scaledBoost / 100))}px`);
+      layout.classList.toggle("large-side", largeQuickLook);
+      wireQuickLookSizeButton();
+    }
+
+    applyQuickLookSize();
+    if (!showSidePanel) layout.classList.add("no-side");
+
+    function uniqueLocations(people) {
+      return [...new Set((people || []).flatMap(person => person.locations || []))].sort();
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
+    }
+
+    function validPersonId(value) {
+      const personId = Number(value);
+      return Number.isInteger(personId) && personId > 0 ? personId : null;
+    }
+
+    function exactPersonButton(person, className = "person-link") {
+      const personId = validPersonId(person?.person_id);
+      const name = String(person?.name || "").trim();
+      if (!personId || !name) return name ? escapeHtml(name) : "";
+      return `<button type="button" class="${className}" data-select-person-id="${personId}">${escapeHtml(name)}</button>`;
+    }
+
+    document.addEventListener("click", event => {
+      const control = event.target.closest("[data-select-person-id]");
+      if (!control) return;
+      const personId = validPersonId(control.dataset.selectPersonId);
+      if (!personId) return;
+      control.closest(".horse-number-choice")?.removeAttribute("open");
+      loadPersonDetail(personId);
+    });
+
+    async function requireEditPin(message = "Enter Edit PIN to continue") {
+      const existing = sessionStorage.getItem("peopleSystemAdminPin") || "";
+      if (existing) {
+        const check = await fetch("/api/admin/edit-check", { method: "POST", headers: { "X-Admin-Pin": existing } });
+        if (check.ok) return true;
+        sessionStorage.removeItem("peopleSystemAdminPin");
+      }
+      const pin = window.prompt(message);
+      if (!pin) return false;
+      const response = await fetch("/api/admin/edit-check", { method: "POST", headers: { "X-Admin-Pin": pin } });
+      if (!response.ok) {
+        alert("That Edit PIN was not accepted.");
+        return false;
+      }
+      sessionStorage.setItem("peopleSystemAdminPin", pin);
+      return true;
+    }
+
+    function parseRaceDateTime(raceDate, startTime) {
+      if (!raceDate || !startTime) return null;
+      const match = String(startTime).match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      if (!match) return null;
+      const dateParts = String(raceDate).split("-").map(Number);
+      if (dateParts.length !== 3 || dateParts.some(part => !Number.isFinite(part))) return null;
+      let hour = Number(match[1]);
+      const minute = Number(match[2]);
+      const suffix = (match[3] || "").toUpperCase();
+      if (suffix === "PM" && hour < 12) hour += 12;
+      if (suffix === "AM" && hour === 12) hour = 0;
+      return new Date(dateParts[0], dateParts[1] - 1, dateParts[2], hour, minute, 0, 0);
+    }
+
+    function currentAutoTarget(overview) {
+      const races = overview?.races || [];
+      if (!races.length || !overview.race_day) return null;
+      const now = new Date();
+      const withTimes = races.map(race => {
+        const source = (lastRaceData?.races || []).find(item => item.id === race.id);
+        return { ...race, startAt: parseRaceDateTime(overview.race_day, source?.start_time) };
+      }).filter(race => race.startAt).sort((a, b) => a.startAt - b.startAt);
+      if (!withTimes.length) return null;
+      const handoff = new Date(now.getTime() + AUTO_RACE_LEAD_MINUTES * 60 * 1000);
+      const raceInsideLeadWindow = withTimes.find(race => race.startAt >= now && race.startAt <= handoff);
+      if (raceInsideLeadWindow) return { preMode: false, race: raceInsideLeadWindow };
+      const previousOrCurrentRace = [...withTimes].reverse().find(race => race.startAt <= now);
+      if (previousOrCurrentRace) return { preMode: false, race: previousOrCurrentRace };
+      return { preMode: true, race: null };
+    }
+
+    function updateAutoControls() {
+      autoRaceToggle.classList.toggle("active", autoRaceMode);
+      autoRaceToggle.textContent = autoRaceMode ? "AUTO: ON" : "AUTO: OFF";
+    }
+
+    function turnAutoOffForManualSelection() {
+      if (!autoRaceMode) return;
+      autoRaceMode = false;
+      saveViewerSettings();
+      updateAutoControls();
+    }
+
+    function updateLocationOptions(people) {
+      const options = uniqueLocations(people);
+      selectedLocations = new Set([...selectedLocations].filter(location => options.includes(location)));
+      locationOptions.innerHTML = options.length
+        ? options.map(location => `
+            <label>
+              <input type="checkbox" value="${escapeHtml(location)}" ${selectedLocations.has(location) ? "checked" : ""}>
+              <span>${escapeHtml(location)}</span>
+            </label>
+          `).join("")
+        : '<span class="subtle">No photo locations yet</span>';
+      locationSummary.textContent = selectedLocations.size ? `${selectedLocations.size} photo locations` : "All photo locations";
+    }
+
+    function imageVisible(person) {
+      return !imagesOnly || Boolean(person.image_url);
+    }
+
+    function roleVisible(person) {
+      if (!selectedRoles.size) return true;
+      const roles = (person.roles || []).map(role => role.toLowerCase());
+      return [...selectedRoles].some(filter => roles.some(role => role.includes(filter)));
+    }
+
+    function filteredRoster(people) {
+      return (people || []).filter(person => {
+        const locationMatch = !selectedLocations.size || (person.locations || []).some(location => selectedLocations.has(location));
+        return roleVisible(person) && imageVisible(person) && locationMatch;
+      });
+    }
+
+    function filteredFocus(people) {
+      return (people || []).filter(imageVisible);
+    }
+
+    function chips(items, className = "chip") {
+      return (items || []).map(item => `<span class="${className}">${escapeHtml(item)}</span>`).join("");
+    }
+
+    function needsNameReview(person) {
+      return String(person.notes || "").toLowerCase().includes("needs trainer name review");
+    }
+
+    function progressiveImageMarkup(className, fullSrc, thumbSrc, alt) {
+      if (!fullSrc) return `<div class="${className}"></div>`;
+      const initialSrc = thumbSrc || fullSrc;
+      return `<img class="${className} progressive-image" src="${initialSrc}" data-full-src="${fullSrc}" alt="${escapeHtml(alt)}">`;
+    }
+
+    function loadProgressiveImages(root = document) {
+      root.querySelectorAll("img.progressive-image[data-full-src]").forEach(image => {
+        const fullSrc = image.dataset.fullSrc;
+        if (!fullSrc || image.src.endsWith(fullSrc)) return;
+        const loader = new Image();
+        loader.onload = () => { image.src = fullSrc; image.classList.add("full-loaded"); };
+        loader.src = fullSrc;
+      });
+    }
+
+    function cardMarkup(person) {
+      const imageSource = person.thumbnail_url || person.image_url;
+      const image = imageSource ? `<img src="${imageSource}" alt="${escapeHtml(person.name)}">` : "";
+      const absent = person.is_absent_today ? `<span class="chip">Absent today</span>` : "";
+      const review = needsNameReview(person) ? `<span class="chip review-chip">Review name</span>` : "";
+      const selectedClass = person.id === selectedPersonId ? " selected-person" : "";
+      const operatorClass = person.id === operatorHighlightPersonId ? " operator-highlight" : "";
+      return `
+        <article class="card${selectedClass}${operatorClass}" data-person-id="${person.id}">
+          ${image}
+          <div class="card-content">
+            <div>
+              <h3>${escapeHtml(person.name)}</h3>
+              <div class="chip-row">${chips(person.roles)}${absent}${review}</div>
+            </div>
+            <div class="chip-row">${chips(person.stables)}</div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderSection(container, people, emptyMessage) {
+      if (!people || !people.length) {
+        container.innerHTML = `<div class="empty">${emptyMessage}</div>`;
+        return;
+      }
+      container.innerHTML = people.map(cardMarkup).join("");
+      container.querySelectorAll(".card").forEach(card => {
+        card.addEventListener("click", () => loadPersonDetail(card.dataset.personId));
+      });
+      applyCardHighlights();
+    }
+
+    function applyCardHighlights() {
+      document.querySelectorAll(".card[data-person-id]").forEach(card => {
+        const personId = Number(card.dataset.personId);
+        card.classList.toggle("selected-person", personId === selectedPersonId);
+        card.classList.toggle("operator-highlight", personId === operatorHighlightPersonId);
+      });
+    }
+
+    function renderRaceButtons(overview) {
+      selectedTrack = overview.selected_track || selectedTrack;
+      const trackButtons = (overview.tracks || []).map(track => {
+        const active = track === selectedTrack ? "active" : "";
+        return `<button class="${active}" type="button" data-track="${escapeHtml(track)}">${escapeHtml(track)}</button>`;
+      }).join("");
+      const preActive = overview.pre_mode ? "active" : "";
+      const raceButtons = (overview.races || []).map(race => {
+        const active = !overview.pre_mode && overview.selected_race_id === race.id ? "active" : "";
+        return `<button class="${active}" type="button" data-race-id="${race.id}">${escapeHtml(race.label)}</button>`;
+      }).join("");
+
+      raceToolbar.innerHTML = `${trackButtons}<button id="pre-mode-btn" class="${preActive}" type="button">Pre</button>${raceButtons}`;
+
+      raceToolbar.querySelectorAll("[data-track]").forEach(button => {
+        button.addEventListener("click", async () => {
+          selectedTrack = button.dataset.track;
+          selectedRaceId = null;
+          preMode = true;
+          turnAutoOffForManualSelection();
+          await loadOverview(searchInput.value);
+        });
+      });
+
+      document.getElementById("pre-mode-btn").addEventListener("click", async () => {
+        preMode = true;
+        selectedRaceId = null;
+        turnAutoOffForManualSelection();
+        saveViewerSettings();
+        updateAutoControls();
+        await loadOverview(searchInput.value);
+      });
+
+      raceToolbar.querySelectorAll("[data-race-id]").forEach(button => {
+        button.addEventListener("click", async () => {
+          preMode = false;
+          selectedRaceId = Number(button.dataset.raceId);
+          turnAutoOffForManualSelection();
+          saveViewerSettings();
+          updateAutoControls();
+          await loadOverview(searchInput.value);
+        });
+      });
+    }
+
+    function renderHorseNumberStrip(overview) {
+      if (overview.pre_mode || !overview.active_race_meta?.entries?.length) {
+        horseNumberStrip.innerHTML = "";
+        return;
+      }
+      const entries = overview.active_race_meta.entries
+        .filter(entry => Number.isInteger(Number(entry.horse_number)) && Number(entry.horse_number) > 0)
+        .sort((left, right) => Number(left.horse_number) - Number(right.horse_number));
+      horseNumberStrip.innerHTML = entries.map(entry => {
+        const number = Number(entry.horse_number);
+        const horseName = String(entry.horse_name || `Horse ${number}`).trim();
+        const scratched = Boolean(entry.is_scratched || String(entry.status || "").toLowerCase() === "scratched");
+        const classes = `horse-number-control${scratched ? " scratched" : ""}`;
+        const title = `${horseName}${scratched ? " (scratched)" : ""}`;
+        const jockeyPersonId = validPersonId(entry.jockey_person_id);
+        const trainers = (entry.trainer_people || []).filter(person => validPersonId(person.person_id) && person.name);
+        if (jockeyPersonId) {
+          return `<button type="button" class="${classes}" data-select-person-id="${jockeyPersonId}" title="${escapeHtml(title)}" aria-label="${escapeHtml(`Horse ${number}, ${horseName}`)}">${number}</button>`;
+        }
+        if (trainers.length === 1) {
+          return `<button type="button" class="${classes}" data-select-person-id="${validPersonId(trainers[0].person_id)}" title="${escapeHtml(title)}" aria-label="${escapeHtml(`Horse ${number}, ${horseName}; select trainer ${trainers[0].name}`)}">${number}</button>`;
+        }
+        if (trainers.length > 1) {
+          return `<details class="horse-number-choice"><summary class="${classes}" title="${escapeHtml(title)}" aria-label="${escapeHtml(`Horse ${number}, ${horseName}; choose trainer`)}">${number}</summary><div class="horse-number-choices"><span class="subtle">Choose trainer</span>${trainers.map(person => exactPersonButton(person, "")).join("")}</div></details>`;
+        }
+        return `<span class="${classes}" title="${escapeHtml(title)}" aria-disabled="true">${number}</span>`;
+      }).join("");
+    }
+
+    function renderOverview(overview) {
+      lastOverview = overview;
+      preMode = overview.pre_mode;
+      selectedRaceId = overview.selected_race_id;
+      selectedTrack = overview.selected_track || selectedTrack;
+      regionScope = overview.region_scope || regionScope;
+      renderRaceButtons(overview);
+
+      const rawFocusPeople = overview.pre_mode ? overview.priority_people : overview.active_race;
+      const focusPeople = filteredFocus(rawFocusPeople);
+      updateLocationOptions(overview.all_people);
+      const rosterPeople = filteredRoster(overview.all_people);
+      regionCurrentButton.textContent = overview.current_region || "Current Region";
+      regionCurrentButton.classList.toggle("active", regionScope !== "all");
+      regionAllButton.classList.toggle("active", regionScope === "all");
+
+      const noCurrentRaceDay = !overview.race_day;
+      focusEyebrow.textContent = noCurrentRaceDay ? "No Race Day" : (overview.pre_mode ? "Pre-Race" : "Race Focus");
+      focusTitle.textContent = noCurrentRaceDay ? `No ${overview.current_region || "current region"} meeting today` : (overview.pre_mode ? "Priority People" : (overview.active_race_meta?.label || "Selected Race"));
+      const hasPublishedFields = Boolean(overview.active_race_meta?.entries?.length);
+      const waitingForFields = !overview.pre_mode && overview.active_race_meta && !hasPublishedFields;
+      focusCount.textContent = noCurrentRaceDay ? "No current races" : (waitingForFields ? "Waiting for fields" : `${focusPeople.length} people`);
+      focusNote.textContent = noCurrentRaceDay
+        ? "No current race meeting is available for this region today."
+        : (waitingForFields
+        ? "This race is loaded, but the full fields have not been published or imported yet."
+        : "");
+      const staleNote = overview.import_warning ? `Race data may be stale - ${overview.import_warning}` : "";
+      raceMeta.classList.toggle("warning-pill", Boolean(staleNote) && !noCurrentRaceDay);
+      raceMeta.textContent = noCurrentRaceDay ? `No ${overview.current_region || "current region"} meeting today` : (staleNote || (overview.pre_mode
+        ? `${selectedTrack ? `${selectedTrack} pre-race` : "Pre-race view"}`
+        : (overview.active_race_meta
+            ? `${overview.active_race_meta.label} - ${waitingForFields ? "Fields not published yet" : `${overview.active_race_meta.entries.length} runners`}`
+            : "No meeting loaded yet")));
+      allCount.textContent = `${rosterPeople.length} of ${overview.all_people.length} records`;
+      renderHorseNumberStrip(overview);
+
+      const focusEmptyMessage = noCurrentRaceDay
+        ? "No current race meeting is available for this region today."
+        : (waitingForFields
+        ? "This race is loaded, but the full fields have not been published or imported yet."
+        : (imagesOnly ? "No people with images match this view." : "No people match the current filters."));
+      renderSection(focusGrid, focusPeople, focusEmptyMessage);
+      renderSection(allGrid, rosterPeople, "No people match the current filters.");
+      updateAutoControls();
+    }
+
+    function relevantRaceEntriesForPerson(detail) {
+      const entries = lastOverview?.active_race_meta?.entries || [];
+      if (preMode || !entries.length) return [];
+      const personId = validPersonId(detail?.id);
+      if (!personId) return [];
+      const linkedHorseIds = new Set((detail.horse_links || [])
+        .filter(link => !link.end_date && !/jockey/i.test(String(link.role || "")) && Number.isInteger(Number(link.horse_id)))
+        .map(link => Number(link.horse_id)));
+      return entries.filter(entry => (
+        validPersonId(entry.jockey_person_id) === personId
+        || (entry.trainer_people || []).some(person => validPersonId(person.person_id) === personId)
+        || (entry.associated_person_ids || []).some(id => validPersonId(id) === personId)
+        || linkedHorseIds.has(Number(entry.horse_id))
+      ));
+    }
+
+    function raceContextForPerson(detail) {
+      const raceMeta = lastOverview?.active_race_meta || {};
+      const matches = relevantRaceEntriesForPerson(detail);
+      if (!matches.length) return "";
+      const personId = validPersonId(detail.id);
+      const raceLabel = `${raceMeta.track || selectedTrack || "Race"}${raceMeta.race_number ? ` Race ${raceMeta.race_number}` : ""}`;
+      return `<div class="race-context"><div class="eyebrow">${escapeHtml(raceLabel)}</div>${matches.map(entry => {
+        const number = entry.horse_number ? `#${entry.horse_number} ` : "";
+        const scratched = Boolean(entry.is_scratched || String(entry.status || "").toLowerCase() === "scratched");
+        const ballot = Boolean(entry.is_ballot);
+        const statusChip = scratched ? `<span class="race-status-chip">SCR</span>` : ballot ? `<span class="race-status-chip">BAL</span>` : "";
+        const silk = entry.silk_image_url ? `<img class="race-silk-thumb" src="${escapeHtml(entry.silk_image_url)}" alt="${escapeHtml(`${entry.horse_name} silk`)}" title="${escapeHtml(entry.silk_description || 'Silk')}">` : "";
+        const associationLines = [];
+        const jockeyPersonId = validPersonId(entry.jockey_person_id);
+        const jockeyName = String(entry.jockey_name || "").trim();
+        if (jockeyName && jockeyPersonId !== personId) {
+          associationLines.push(`<span><b>Jockey:</b> ${exactPersonButton({ person_id: jockeyPersonId, name: jockeyName })}</span>`);
+        }
+        const trainers = (entry.trainer_people || []).filter(person => validPersonId(person.person_id) !== personId);
+        if (trainers.length) {
+          const personIsTrainer = (entry.trainer_people || []).some(person => validPersonId(person.person_id) === personId);
+          associationLines.push(`<span><b>${personIsTrainer ? "Co-trainer" : "Trainer"}${trainers.length > 1 ? "s" : ""}:</b> ${trainers.map(person => exactPersonButton(person)).join(", ")}</span>`);
+        } else if (!(entry.trainer_people || []).length && entry.trainer_name) {
+          associationLines.push(`<span><b>Trainer:</b> ${escapeHtml(entry.trainer_name)}</span>`);
+        }
+        const associations = associationLines.length ? `<div class="race-associations">${associationLines.join("")}</div>` : "";
+        return `<div class="race-context-item${scratched ? " scratched" : ""}${silk ? "" : " no-silk"}">${silk}<div class="race-context-copy"><strong>${number}${escapeHtml(entry.horse_name)}${statusChip}</strong>${associations}</div></div>`;
+      }).join("")}</div>`;
+    }
+
+    function wireRaceSilkFallbacks() {
+      detailShell.querySelectorAll("img.race-silk-thumb").forEach(image => {
+        image.addEventListener("error", () => {
+          const item = image.closest(".race-context-item");
+          if (item) item.classList.add("no-silk");
+          image.remove();
+        }, { once: true });
+      });
+    }
+
+    function horseAssociatesMarkup(detail) {
+      const relevantEntries = relevantRaceEntriesForPerson(detail).filter(entry => Number.isInteger(Number(entry.horse_id)));
+      if (!relevantEntries.length) return "";
+      const horseCount = new Set(relevantEntries.map(entry => Number(entry.horse_id))).size;
+      return `<details class="horse-associates" id="horse-associates"><summary>Horse associates${horseCount > 1 ? ` (${horseCount} horses)` : ""}</summary><div class="horse-associates-content"><span class="subtle">Open to load current non-jockey associates.</span></div></details>`;
+    }
+
+    async function loadHorseAssociateDetail(horseId) {
+      if (!horseAssociateCache.has(horseId)) {
+        horseAssociateCache.set(horseId, fetchWithTimeout(`/api/horses/${horseId}`)
+          .then(response => response.json())
+          .catch(() => {
+            horseAssociateCache.delete(horseId);
+            return null;
+          }));
+      }
+      return horseAssociateCache.get(horseId);
+    }
+
+    function eligibleHorseAssociates(entry, horseDetail, selectedId) {
+      const people = [];
+      const seen = new Set();
+      const add = (personId, name, role) => {
+        const exactId = validPersonId(personId);
+        if (!exactId || exactId === selectedId || seen.has(exactId) || !name) return;
+        seen.add(exactId);
+        people.push({ person_id: exactId, name, role: role || "Associate" });
+      };
+      (entry.trainer_people || []).forEach(person => add(person.person_id, person.name, "Trainer"));
+      (horseDetail?.associated_people || [])
+        .filter(person => !person.end_date && !/jockey/i.test(String(person.role || "")))
+        .forEach(person => add(person.person_id, person.person_name, person.role));
+      return people;
+    }
+
+    function wireHorseAssociates(detail) {
+      const container = document.getElementById("horse-associates");
+      if (!container) return;
+      const relevantEntries = relevantRaceEntriesForPerson(detail).filter(entry => Number.isInteger(Number(entry.horse_id)));
+      container.addEventListener("toggle", async () => {
+        if (!container.open || container.dataset.loaded === "true" || container.dataset.loading === "true") return;
+        container.dataset.loading = "true";
+        const content = container.querySelector(".horse-associates-content");
+        const uniqueEntries = [...new Map(relevantEntries.map(entry => [Number(entry.horse_id), entry])).values()];
+        const details = await Promise.all(uniqueEntries.map(entry => loadHorseAssociateDetail(Number(entry.horse_id))));
+        content.innerHTML = uniqueEntries.map((entry, index) => {
+          const associates = eligibleHorseAssociates(entry, details[index], validPersonId(detail.id));
+          const rows = associates.length
+            ? associates.map(person => `<div class="horse-associate-row"><span class="horse-associate-role">${escapeHtml(person.role)}</span><span>${exactPersonButton(person)}</span></div>`).join("")
+            : `<span class="subtle">No current non-jockey associates recorded.</span>`;
+          return `<div class="horse-associate-group"><strong>${escapeHtml(entry.horse_name)}</strong>${rows}</div>`;
+        }).join("");
+        if (details.every(Boolean)) container.dataset.loaded = "true";
+        delete container.dataset.loading;
+      });
+    }
+
+    function quickLookAttachLabel() {
+      if (!lastOverview?.race_day || !selectedTrack) return null;
+      if (preMode) {
+        return `Add To Pre-Race`;
+      }
+      const raceNumber = lastOverview?.active_race_meta?.race_number;
+      if (raceNumber) {
+        return `Add To Race ${raceNumber}`;
+      }
+       return `Add To Race`;
+    }
+
+    function renderPersonDetail(detail) {
+      selectedPersonId = detail.id;
+      detailShell.classList.remove("empty-state");
+      const alreadyInSelectedRace = !preMode && relevantRaceEntriesForPerson(detail).length > 0;
+      const canAttachToMeeting = Boolean(lastOverview?.race_day && selectedTrack) && !alreadyInSelectedRace;
+      const attachLabel = quickLookAttachLabel();
+      detailShell.innerHTML = `
+        <section class="meta-card">
+          <div class="quick-title-row"><div><div class="eyebrow">Selected Person</div><h3>${escapeHtml(detail.name)}</h3></div>${quickLookSizeButtonMarkup()}</div>
+          ${progressiveImageMarkup("selected-image", detail.image_url, detail.thumbnail_url, detail.name)}
+          <div class="chip-row">${chips(detail.roles)}${detail.is_absent_today ? `<span class="chip">Absent today</span>` : ""}</div>
+          ${raceContextForPerson(detail)}
+          ${horseAssociatesMarkup(detail)}
+          <div class="chip-row">
+            <a class="button-link" href="/records?person=${detail.id}" data-help="Open this person's full record in Manage People.">Open Record</a>
+            <button type="button" id="toggle-quick-absence" data-help="${escapeHtml(detail.is_absent_today ? 'Mark this person present again for today so they show up in race-day views.' : 'Mark this person absent for today so they stop showing in race-day views.')}">${detail.is_absent_today ? "Mark Present" : "Mark Absent"}</button>
+            ${canAttachToMeeting && attachLabel ? `<button type="button" id="add-to-race-btn" data-help="${escapeHtml(preMode ? 'Add this person to the current pre-race list.' : `Add this person to the currently selected race${lastOverview?.active_race_meta?.race_number ? `, race ${lastOverview.active_race_meta.race_number}` : ''}.`)}">${escapeHtml(attachLabel)}</button>` : ''}
+            <button type="button" id="clear-selected-person" data-help="Clear the quick-look tile and remove the current selected person.">Clear</button>
+          </div>
+        </section>
+      `;
+      loadProgressiveImages(detailShell);
+      wireRaceSilkFallbacks();
+      wireHorseAssociates(detail);
+      document.getElementById("toggle-quick-absence").addEventListener("click", async () => {
+        const nextAbsent = !detail.is_absent_today;
+        const reason = nextAbsent ? `Away from ${selectedTrack || 'this race course'}` : null;
+        if (!await requireEditPin(nextAbsent ? "Enter Edit PIN to mark this person absent" : "Enter Edit PIN to mark this person present")) return;
+        await fetch(`/api/people/${detail.id}/absence`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Admin-Pin": sessionStorage.getItem("peopleSystemAdminPin") || "" },
+          body: JSON.stringify({ is_absent: nextAbsent, reason, race_date: lastOverview?.race_day || null, track: selectedTrack || null }),
+        });
+        await loadOverview(searchInput.value);
+        await loadPersonDetail(detail.id);
+      });
+      const addToRaceButton = document.getElementById("add-to-race-btn");
+      if (addToRaceButton) {
+        addToRaceButton.addEventListener("click", async () => {
+          const targetLabel = quickLookAttachLabel() || (preMode ? "pre-race" : "race");
+          if (!window.confirm(`Add ${detail.name} to ${targetLabel}?`)) return;
+          const response = await fetch('/api/races/manual-attendees', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              person_id: detail.id,
+              track: selectedTrack,
+              race_date: lastOverview?.race_day || null,
+              race_id: preMode ? null : selectedRaceId,
+              note: preMode ? 'Added from viewer pre-race quick look' : `Added from viewer for ${selectedTrack} race ${lastOverview?.active_race_meta?.race_number || ''}`.trim(),
+            }),
+          });
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            alert(error.detail || 'Could not add this person to the selected race.');
+            return;
+          }
+          await loadOverview(searchInput.value);
+          await loadPersonDetail(detail.id);
+        });
+      }
+      wireQuickLookSizeButton();
+      document.getElementById("clear-selected-person").addEventListener("click", async () => {
+        selectedPersonId = null;
+        renderEmptyQuickLook();
+        await syncViewerState({ clear_selected: true });
+        if (lastOverview) renderOverview(lastOverview);
+      });
+    }
+
+    function updateSyncPresentation() {
+      const lastKnownActivity = Math.max(stateMonitoringStartedAt, lastStateSuccessAt || 0);
+      const nextSyncLost = Date.now() - lastKnownActivity >= SYNC_LOST_AFTER_MS;
+      if (nextSyncLost !== syncLost) syncLost = nextSyncLost;
+      document.body.classList.toggle("sync-lost", syncLost);
+      syncReconnectButton.classList.toggle("sync-lost", syncLost);
+      syncReconnectButton.title = syncLost ? "Sync lost. Reconnect now" : "Synced. Refresh shared state";
+      syncReconnectButton.setAttribute("aria-label", syncReconnectButton.title);
+    }
+
+    function noteStateSuccess() {
+      lastStateSuccessAt = Date.now();
+      stateRetryDelayMs = STATE_POLL_INTERVAL_MS;
+      syncLost = false;
+      updateSyncPresentation();
+    }
+
+    function noteStateFailure() {
+      stateRetryDelayMs = Math.min(STATE_RETRY_MAX_MS, Math.max(STATE_POLL_INTERVAL_MS, stateRetryDelayMs * 2));
+      updateSyncPresentation();
+    }
+
+    async function fetchWithTimeout(url, options = {}, timeoutMs = STATE_REQUEST_TIMEOUT_MS) {
+      const controller = options.controller || new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        if (!response.ok) throw new Error(`Request failed (${response.status})`);
+        return response;
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    }
+
+    function applyOperatorHighlight(state) {
+      const nextOperatorHighlight = state.operator_highlight_person_id === null || state.operator_highlight_person_id === undefined
+        ? null
+        : Number(state.operator_highlight_person_id);
+      if (operatorHighlightPersonId !== nextOperatorHighlight) {
+        operatorHighlightPersonId = nextOperatorHighlight;
+        applyCardHighlights();
+      }
+    }
+
+    function validStateRaceId(value) {
+      const raceId = Number(value);
+      return Number.isInteger(raceId) && raceId > 0 ? raceId : null;
+    }
+
+    function stateMatchesEffectiveRaceDay(state, raceDay) {
+      return Boolean(state?.race_date && raceDay && String(state.race_date) === String(raceDay));
+    }
+
+    function sharedRaceSelectionForEffectiveOverview(state, overview) {
+      const defaultSelection = {
+        selectedTrack: overview?.selected_track || null,
+        selectedRaceId: null,
+        preMode: true,
+      };
+      const effectiveRaceDay = overview?.race_day || null;
+      const availableTracks = overview?.tracks || [];
+      const stateRaceId = validStateRaceId(state?.selected_race_id);
+      if (!stateMatchesEffectiveRaceDay(state, effectiveRaceDay)) {
+        return { ...defaultSelection, stateWasRejected: true, requestedStateRaceId: null };
+      }
+
+      const requestedTrack = state?.selected_track || null;
+      if (requestedTrack && !availableTracks.includes(requestedTrack)) {
+        return { ...defaultSelection, stateWasRejected: true, requestedStateRaceId: null };
+      }
+
+      const preMode = state?.pre_mode !== false;
+      if ((preMode && stateRaceId) || (!preMode && !stateRaceId)) {
+        return { ...defaultSelection, stateWasRejected: true, requestedStateRaceId: null };
+      }
+      return {
+        selectedTrack: requestedTrack || defaultSelection.selectedTrack,
+        selectedRaceId: preMode ? null : stateRaceId,
+        preMode,
+        stateWasRejected: false,
+        requestedStateRaceId: preMode ? null : stateRaceId,
+      };
+    }
+
+    async function reconcileAuthoritativeViewerState(state) {
+      const nextSelectedPersonId = state.selected_person_id === null || state.selected_person_id === undefined
+        ? null
+        : Number(state.selected_person_id);
+
+      // Resolve the current effective race day before accepting state left over from
+      // another viewing session. A Settings date override remains the local user's
+      // explicit choice; otherwise only a same-day shared selection is reusable.
+      selectedTrack = null;
+      selectedRaceId = null;
+      selectedRaceDate = raceDateOverride || null;
+      preMode = true;
+      await loadOverview(searchInput.value, { skipAuto: true, publishState: false, controller: statePollController });
+
+      const sharedSelection = sharedRaceSelectionForEffectiveOverview(state, lastOverview);
+      let stateWasRejected = sharedSelection.stateWasRejected;
+      let requestedStateRaceId = sharedSelection.requestedStateRaceId;
+      selectedTrack = sharedSelection.selectedTrack;
+      selectedRaceId = sharedSelection.selectedRaceId;
+      preMode = sharedSelection.preMode;
+
+      if (!stateWasRejected && (selectedTrack !== lastOverview?.selected_track || !preMode)) {
+        await loadOverview(searchInput.value, { skipAuto: true, publishState: false, controller: statePollController });
+        if (!preMode && lastOverview?.selected_race_id !== requestedStateRaceId) {
+          stateWasRejected = true;
+          selectedRaceId = null;
+          preMode = true;
+          await loadOverview(searchInput.value, { skipAuto: true, publishState: false, controller: statePollController });
+        }
+      }
+
+      selectedTrack = lastOverview?.selected_track || selectedTrack;
+      selectedRaceId = lastOverview?.selected_race_id || null;
+      preMode = lastOverview?.pre_mode !== false;
+      selectedRaceDate = lastOverview?.race_day || raceDateOverride || null;
+      const effectiveState = {
+        selected_track: selectedTrack,
+        selected_race_id: selectedRaceId,
+        pre_mode: preMode,
+        race_date: selectedRaceDate,
+      };
+      lastPublishedStateKey = JSON.stringify(effectiveState);
+      if (stateWasRejected) await syncViewerState(effectiveState);
+
+      // Preserve manual mode exactly. When Auto is already enabled, use its existing
+      // evaluator after bootstrap, reconnect, or a runtime reset has been reconciled.
+      await maybeAutoSelectRace();
+      if (nextSelectedPersonId === null) {
+        if (selectedPersonId !== null) renderEmptyQuickLook();
+        selectedPersonId = null;
+        if (lastOverview) renderOverview(lastOverview);
+        needsAuthoritativeReconcile = false;
+        return;
+      }
+      if (selectedPersonId !== nextSelectedPersonId) {
+        await loadPersonDetail(nextSelectedPersonId, { publishState: false, controller: statePollController });
+      }
+      needsAuthoritativeReconcile = false;
+    }
+
+    function scheduleStatePoll(delayMs = STATE_POLL_INTERVAL_MS) {
+      if (statePollTimer) window.clearTimeout(statePollTimer);
+      statePollTimer = window.setTimeout(() => runStatePoll(), delayMs);
+    }
+
+    async function runStatePoll(forceReconcile = false) {
+      if (statePollInFlight) return;
+      statePollInFlight = true;
+      statePollController = new AbortController();
+      let shouldReconcile = forceReconcile || statePollForceRequested || syncLost || needsAuthoritativeReconcile;
+      statePollForceRequested = false;
+      try {
+        const response = await fetchWithTimeout("/api/viewer-state", { controller: statePollController });
+        const state = await response.json();
+        if (lastStateRuntimeId !== null && state.runtime_id && state.runtime_id !== lastStateRuntimeId) {
+          shouldReconcile = true;
+        }
+        lastStateRuntimeId = state.runtime_id || lastStateRuntimeId;
+        noteStateSuccess();
+        applyOperatorHighlight(state);
+        if (shouldReconcile) await reconcileAuthoritativeViewerState(state);
+      } catch (_) {
+        if (!statePollForceRequested) noteStateFailure();
+      } finally {
+        statePollController = null;
+        statePollInFlight = false;
+        const nextDelay = statePollForceRequested ? 0 : (syncLost ? stateRetryDelayMs : STATE_POLL_INTERVAL_MS);
+        scheduleStatePoll(nextDelay);
+      }
+    }
+
+    async function reconnectNow() {
+      statePollForceRequested = true;
+      if (statePollTimer) window.clearTimeout(statePollTimer);
+      if (statePollInFlight) {
+        statePollController?.abort();
+        return;
+      }
+      await runStatePoll(true);
+    }
+
+    async function syncViewerState(extra = {}) {
+      try {
+        const response = await fetchWithTimeout("/api/viewer-state", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            selected_track: selectedTrack,
+            selected_race_id: selectedRaceId,
+            pre_mode: preMode,
+            race_date: raceDateOverride || selectedRaceDate || lastOverview?.race_day || null,
+            ...extra,
+          }),
+        });
+        const state = await response.json();
+        lastStateRuntimeId = state.runtime_id || lastStateRuntimeId;
+        noteStateSuccess();
+        applyOperatorHighlight(state);
+        return true;
+      } catch (_) {
+        needsAuthoritativeReconcile = true;
+        noteStateFailure();
+        return false;
+      }
+    }
+
+    async function loadOverview(search = "", { skipAuto = false, publishState = true, controller = null } = {}) {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (selectedTrack) params.set("track", selectedTrack);
+      if (raceDateOverride || selectedRaceDate) params.set("race_date", raceDateOverride || selectedRaceDate);
+      params.set("region_scope", regionScope);
+      if (preMode) {
+        params.set("pre", "true");
+      } else if (selectedRaceId) {
+        params.set("race_id", String(selectedRaceId));
+      }
+      const query = params.toString() ? `?${params.toString()}` : "";
+      const response = await fetchWithTimeout(`/api/people/overview${query}`, controller ? { controller } : {});
+      const overview = await response.json();
+      renderOverview(overview);
+      if (!skipAuto) await maybeAutoSelectRace(overview);
+      const statePayload = {
+        selected_track: overview.selected_track || selectedTrack,
+        selected_race_id: overview.selected_race_id || selectedRaceId,
+        pre_mode: overview.pre_mode,
+        race_date: overview.race_day || raceDateOverride || selectedRaceDate || null,
+      };
+      const stateKey = JSON.stringify(statePayload);
+      if (stateKey !== lastPublishedStateKey) {
+        lastPublishedStateKey = stateKey;
+        if (publishState) await syncViewerState(statePayload);
+      }
+    }
+
+    let lastRaceData = null;
+    async function loadRaceDataForAuto() {
+      const params = new URLSearchParams();
+      if (selectedTrack) params.set("track", selectedTrack);
+      if (raceDateOverride) params.set("race_date", raceDateOverride);
+      const response = await fetch(`/api/races/today${params.toString() ? `?${params}` : ""}`);
+      if (response.ok) lastRaceData = await response.json();
+    }
+
+    async function maybeAutoSelectRace(overview = lastOverview) {
+      if (!autoRaceMode || !overview) return;
+      await loadRaceDataForAuto();
+      const target = currentAutoTarget(overview);
+      if (!target) return;
+      if (target.preMode) {
+        if (preMode && !selectedRaceId) return;
+        preMode = true;
+        selectedRaceId = null;
+        await syncViewerState({ selected_race_id: null, pre_mode: true, selected_track: selectedTrack, race_date: overview.race_day || null });
+        const params = new URLSearchParams();
+        if (searchInput.value) params.set("search", searchInput.value);
+        if (selectedTrack) params.set("track", selectedTrack);
+        params.set("pre", "true");
+        params.set("region_scope", regionScope);
+        if (raceDateOverride) params.set("race_date", raceDateOverride);
+        const response = await fetch(`/api/people/overview?${params.toString()}`);
+        if (response.ok) renderOverview(await response.json());
+        return;
+      }
+      const race = target.race;
+      if (!race || (selectedRaceId === race.id && !preMode)) return;
+      preMode = false;
+      selectedRaceId = race.id;
+      await syncViewerState({ selected_race_id: selectedRaceId, pre_mode: false, selected_track: selectedTrack, race_date: overview.race_day || null });
+      const params = new URLSearchParams();
+      if (searchInput.value) params.set("search", searchInput.value);
+      if (selectedTrack) params.set("track", selectedTrack);
+      params.set("race_id", String(selectedRaceId));
+      params.set("region_scope", regionScope);
+      if (raceDateOverride) params.set("race_date", raceDateOverride);
+      const response = await fetch(`/api/people/overview?${params.toString()}`);
+      if (response.ok) renderOverview(await response.json());
+    }
+
+    async function loadPersonDetail(personId, { publishState = true, controller = null } = {}) {
+      const requestId = ++detailRequestId;
+      selectedPersonId = Number(personId);
+      if (lastOverview) renderOverview(lastOverview);
+      const params = new URLSearchParams();
+      if (lastOverview?.race_day) params.set("race_date", lastOverview.race_day);
+      if (selectedTrack) params.set("track", selectedTrack);
+      const response = await fetchWithTimeout(
+        `/api/people/${personId}${params.toString() ? `?${params}` : ""}`,
+        controller ? { controller } : {},
+      );
+      const detail = await response.json();
+      if (requestId !== detailRequestId) return;
+      renderPersonDetail(detail);
+      if (publishState) await syncViewerState({ selected_person_id: Number(personId) });
+    }
+
+    function updateRoleButtons() {
+      rosterFilters.querySelectorAll("[data-role-filter]").forEach(button => {
+        const role = button.dataset.roleFilter;
+        button.classList.toggle("active", role === "all" ? !selectedRoles.size : selectedRoles.has(role));
+      });
+    }
+
+    rosterFilters.querySelectorAll("[data-role-filter]").forEach(button => {
+      button.addEventListener("click", () => {
+        const role = button.dataset.roleFilter;
+        if (role === "all") {
+          selectedRoles.clear();
+        } else if (selectedRoles.has(role)) {
+          selectedRoles.delete(role);
+        } else {
+          selectedRoles.add(role);
+        }
+        updateRoleButtons();
+        if (lastOverview) renderOverview(lastOverview);
+      });
+    });
+
+    regionCurrentButton.addEventListener("click", async () => {
+      regionScope = "current";
+      if (lastOverview) await loadOverview(searchInput.value);
+    });
+
+    regionAllButton.addEventListener("click", async () => {
+      regionScope = "all";
+      if (lastOverview) await loadOverview(searchInput.value);
+    });
+
+    locationOptions.addEventListener("change", event => {
+      if (event.target.type !== "checkbox") return;
+      if (event.target.checked) selectedLocations.add(event.target.value);
+      else selectedLocations.delete(event.target.value);
+      if (lastOverview) renderOverview(lastOverview);
+    });
+
+    document.addEventListener("click", event => {
+      if (!locationMenu.contains(event.target)) locationMenu.removeAttribute("open");
+    });
+
+    searchInput.addEventListener("input", () => loadOverview(searchInput.value));
+    imageVisibilityToggle.addEventListener("click", saveImageVisibilityPreference);
+    syncReconnectButton.addEventListener("click", reconnectNow);
+    let wakeLockSentinel = null;
+    let wakeLockRequestPromise = null;
+    async function acquireWakeLockForFullscreen() {
+      if (!document.fullscreenElement || wakeLockSentinel || wakeLockRequestPromise || !navigator.wakeLock?.request) return;
+      wakeLockRequestPromise = (async () => {
+        try {
+          const sentinel = await navigator.wakeLock.request("screen");
+          if (!document.fullscreenElement) {
+            try { await sentinel.release(); } catch (_) {}
+            return;
+          }
+          wakeLockSentinel = sentinel;
+          sentinel.addEventListener("release", () => {
+            if (wakeLockSentinel === sentinel) wakeLockSentinel = null;
+          }, { once: true });
+        } catch (_) {
+          wakeLockSentinel = null;
+        }
+      })();
+      try { await wakeLockRequestPromise; } finally { wakeLockRequestPromise = null; }
+    }
+    async function releaseWakeLock() {
+      const sentinel = wakeLockSentinel;
+      wakeLockSentinel = null;
+      if (!sentinel) return;
+      try { await sentinel.release(); } catch (_) {}
+    }
+    async function syncWakeLockWithFullscreen() {
+      if (document.fullscreenElement) await acquireWakeLockForFullscreen();
+      else await releaseWakeLock();
+    }
+    function updateFullscreenControl() {
+      const fullscreen = Boolean(document.fullscreenElement);
+      fullscreenToggle.title = fullscreen ? "Exit full screen" : "Enter full screen";
+      fullscreenToggle.setAttribute("aria-label", fullscreenToggle.title);
+      fullscreenToggle.classList.toggle("active", fullscreen);
+    }
+    fullscreenToggle.addEventListener("click", async () => {
+      try {
+        if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.();
+        else await document.exitFullscreen?.();
+      } catch (_) {
+        // Browsers can decline fullscreen without treating it as an app error.
+      } finally {
+        updateFullscreenControl();
+        syncWakeLockWithFullscreen();
+        window.setTimeout(updateFullscreenControl, 100);
+      }
+    });
+    document.addEventListener("fullscreenchange", () => {
+      updateFullscreenControl();
+      syncWakeLockWithFullscreen();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && document.fullscreenElement) acquireWakeLockForFullscreen();
+    });
+    autoRaceToggle.addEventListener("click", async () => {
+      autoRaceMode = !autoRaceMode;
+      saveViewerSettings();
+      updateAutoControls();
+      await maybeAutoSelectRace();
+    });
+    loadInstanceBranding();
+    async function bootstrap() {
+      await loadViewerPreferences();
+      await runStatePoll(true);
+      if (!lastOverview) {
+        try {
+          await loadOverview("", { skipAuto: true, publishState: false });
+        } catch (_) {
+          // First load has no last-known-good content to retain.
+        }
+      }
+    }
+    bootstrap();
+    setInterval(updateSyncPresentation, 1000);
+    setInterval(() => maybeAutoSelectRace(), 60000);
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
