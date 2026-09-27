@@ -34,9 +34,11 @@ def _normalise_name(value: str | None) -> str:
 
 
 def _import_payload(row: FramePullImport) -> dict:
+    acknowledgement_state = "acknowledged" if row.acknowledged_at else ("ack_failed" if row.acknowledgement_error else "ack_pending")
     return {
         "id": row.id, "source_kind": row.source_kind, "source_id": row.source_id,
         "person_id": row.person_id, "image_id": row.image_id, "acknowledged": bool(row.acknowledged_at),
+        "acknowledgement_state": acknowledgement_state,
         "acknowledgement_error": row.acknowledgement_error,
         "imported_at": row.imported_at.isoformat() if row.imported_at else None,
     }
@@ -250,3 +252,11 @@ def _acknowledge_existing(imported: FramePullImport, db: Session, client: FrameP
             imported.acknowledgement_error = "People import committed; Frame Pull acknowledgement will retry on the next import request."
             db.commit()
     return {"status": "imported", "import": _import_payload(imported)}
+
+
+@router.post("/imports/{import_id}/retry-acknowledgement")
+def retry_acknowledgement(import_id: int, db: Session = Depends(get_db), client: FramePullClient = Depends(get_client), _: None = Depends(require_edit_pin)) -> dict:
+    imported = db.get(FramePullImport, import_id)
+    if not imported:
+        raise HTTPException(404, "Frame Pull import was not found.")
+    return _acknowledge_existing(imported, db, client)

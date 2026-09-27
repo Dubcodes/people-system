@@ -35,8 +35,10 @@ acknowledgement state. The group ID is unique, so repeated imports do not make
 duplicate records.
 
 The People transaction commits before Frame Pull receives `mark-exported`.
-If acknowledgement is temporarily unavailable, the committed import is marked
-for acknowledgement retry when the operator repeats the import action.
+The provenance record explicitly reports `ack_pending`, `ack_failed`, or
+`acknowledged`. If acknowledgement is temporarily unavailable, the committed
+import remains intact and `POST /api/frame-pull/imports/{id}/retry-acknowledgement`
+retries only the downstream acknowledgement; it never imports a second image.
 
 ## Development checks
 

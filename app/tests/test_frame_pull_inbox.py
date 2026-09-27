@@ -138,11 +138,13 @@ class FramePullInboxTests(unittest.TestCase):
         saved = self.db.query(FramePullImport).one()
         self.assertIsNone(saved.acknowledged_at)
         self.assertIsNotNone(saved.acknowledgement_error)
+        self.assertEqual(self.client.get("/api/frame-pull/inbox?state=all").json()["items"][0]["import"]["acknowledgement_state"], "ack_failed")
         self.client_service.fail_ack = False
-        retry = self.client.post("/api/frame-pull/groups/7/import", json={"person_id": self.person.id})
+        retry = self.client.post(f"/api/frame-pull/imports/{saved.id}/retry-acknowledgement")
         self.assertEqual(retry.status_code, 200)
         self.db.expire_all()
         self.assertIsNotNone(self.db.query(FramePullImport).one().acknowledged_at)
+        self.assertEqual(retry.json()["import"]["acknowledgement_state"], "acknowledged")
 
     def test_missing_person_never_downloads_or_acknowledges(self):
         response = self.client.post("/api/frame-pull/groups/7/import", json={"person_id": 9999})
