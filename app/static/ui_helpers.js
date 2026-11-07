@@ -133,6 +133,7 @@
       ...(path === '/' ? [['Operator', '/operator']] : []),
       ['Image Ingest', '/ingest'],
       ['Bulk Ingest', '/bulk-ingest'],
+      ['Frame Pull Inbox', '/frame-pull'],
       ['Manage People', '/records'],
       ['Horses', '/horses'],
       ['Import Races', '/race-ingest'],

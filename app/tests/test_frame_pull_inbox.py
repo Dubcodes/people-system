@@ -116,6 +116,16 @@ class FramePullInboxTests(unittest.TestCase):
         self.assertEqual(row["suggested_matches"], [{"id": self.person.id, "name": "Ryan Foote"}])
         self.assertEqual(self.db.query(FramePullImport).count(), 0)
 
+    def test_inbox_query_filters_support_frame_pull_deep_link(self):
+        self.assertEqual(len(self.client.get('/api/frame-pull/inbox?name=Ryan%20Foote&track=Cambridge&state=ready').json()['items']), 1)
+        self.assertEqual(self.client.get('/api/frame-pull/inbox?name=Someone%20Else&state=ready').json()['items'], [])
+
+    def test_inbox_ui_initializes_query_filters_and_preselects_one_exact_match(self):
+        page=(Path(__file__).resolve().parents[1]/'static'/'frame_pull.html').read_text(encoding='utf-8')
+        self.assertIn("new URLSearchParams(location.search)", page)
+        self.assertIn("matches.length===1?'selected':''", page)
+        self.assertIn('Preferred image', page)
+
     def test_import_commits_then_acknowledges_and_is_idempotent(self):
         response = self.client.post("/api/frame-pull/groups/7/import", json={"person_id": self.person.id})
         self.assertEqual(response.status_code, 200)
